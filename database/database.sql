@@ -1,0 +1,86 @@
+DROP DATABASE IF EXISTS chilla;
+CREATE DATABASE chilla CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE chilla;
+SET default_storage_engine = InnoDB;
+
+-- Table Projet
+CREATE TABLE Projet (
+    IDpro INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    labpro VARCHAR(255) NOT NULL,
+    descrpro VARCHAR(255),
+    datedpro DATE NOT NULL,
+    datefpro DATE NOT NULL,
+    estarchive BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+-- Table Sprint
+CREATE TABLE Sprint (
+    IDsp INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    nomsp VARCHAR(255) NOT NULL,
+    objectifsp VARCHAR(255),
+    datedsp DATE NOT NULL,
+    datefsp DATE NOT NULL,
+    etat ENUM('non commencé', 'en cours', 'terminé', 'annulé') NOT NULL DEFAULT 'non commencé',
+    IDpro INT NOT NULL,
+    FOREIGN KEY (IDpro) REFERENCES Projet(IDpro) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Table Membre
+CREATE TABLE Membre (
+    IDmem INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    nommem VARCHAR(255) NOT NULL,
+    prenommem VARCHAR(255) NOT NULL,
+    emailmem VARCHAR(255) NOT NULL UNIQUE,
+    motdepassemem VARCHAR(255) NOT NULL,
+    datecreamem DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table Tache
+CREATE TABLE Tache (
+    IDtach INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    labtach VARCHAR(255) NOT NULL,
+    descrtach VARCHAR(255),
+    datecreatach DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dateeche DATE NOT NULL,
+    estim INT NOT NULL,
+    pos INT NOT NULL,
+    IDpro INT NOT NULL,
+    IDmem INT NOT NULL,
+    IDsp INT NOT NULL,
+    FOREIGN KEY (IDpro) REFERENCES Projet(IDpro) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (IDmem) REFERENCES Membre(IDmem) ON DELETE RESTRICT  ON UPDATE CASCADE,
+    FOREIGN KEY (IDsp) REFERENCES Sprint(IDsp) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Table Invitation
+CREATE TABLE Invitation (
+    IDinvit INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    statut ENUM('en attente', 'acceptée', 'refusée') NOT NULL DEFAULT 'en attente',
+    dateevoi DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    IDpro INT NOT NULL,
+    IDemetteur INT NOT NULL,
+    IDrecepteur INT NOT NULL,
+    FOREIGN KEY (IDpro) REFERENCES Projet(IDpro) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (IDemetteur) REFERENCES Membre(IDmem) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (IDrecepteur) REFERENCES Membre(IDmem) ON DELETE CASCADE
+);
+
+-- Table Membre_Projet
+CREATE TABLE Membre_Projet (
+    IDmem INT NOT NULL,
+    IDpro INT NOT NULL,
+    PRIMARY KEY (IDmem, IDpro),
+    rolemem ENUM('chef de projet', 'membre') NOT NULL DEFAULT 'membre',
+    FOREIGN KEY (IDmem) REFERENCES Membre(IDmem) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (IDpro) REFERENCES Projet(IDpro) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Table Notification
+CREATE TABLE Notification (
+    IDnotif INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    message VARCHAR(255) NOT NULL,
+    datecreanotif DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    estlue BOOLEAN NOT NULL DEFAULT FALSE,
+    IDmem INT NOT NULL,
+    FOREIGN KEY (IDmem) REFERENCES Membre(IDmem) ON DELETE CASCADE ON UPDATE CASCADE
+);
