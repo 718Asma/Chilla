@@ -20,7 +20,7 @@ CREATE TABLE Sprint (
     objectifsp VARCHAR(255),
     datedsp DATE NOT NULL,
     datefsp DATE NOT NULL,
-    etat ENUM('non commencé', 'en cours', 'terminé', 'annulé') NOT NULL DEFAULT 'non commencé',
+    etatsp ENUM('NON_COMMENCE', 'EN_COURS', 'TERMINE', 'ANNULE') NOT NULL DEFAULT 'NON_COMMENCE',
     IDpro INT NOT NULL,
     FOREIGN KEY (IDpro) REFERENCES Projet(IDpro) ON DELETE CASCADE ON UPDATE CASCADE
 );
@@ -43,6 +43,7 @@ CREATE TABLE Tache (
     datecreatach DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     dateeche DATE NOT NULL,
     estim INT NOT NULL,
+    etattach ENUM('NON_COMMENCE', 'EN_COURS', 'TERMINE', 'ANNULE') NOT NULL DEFAULT 'NON_COMMENCE',
     pos INT NOT NULL,
     IDpro INT NOT NULL,
     IDmem INT NOT NULL,
@@ -55,7 +56,7 @@ CREATE TABLE Tache (
 -- Table Invitation
 CREATE TABLE Invitation (
     IDinvit INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    statut ENUM('en attente', 'acceptée', 'refusée') NOT NULL DEFAULT 'en attente',
+    statut ENUM('EN_ATTENTE', 'ACCEPTEE', 'REFUSEE') NOT NULL DEFAULT 'EN_ATTENTE',
     dateevoi DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     IDpro INT NOT NULL,
     IDemetteur INT NOT NULL,
@@ -70,7 +71,7 @@ CREATE TABLE Membre_Projet (
     IDmem INT NOT NULL,
     IDpro INT NOT NULL,
     PRIMARY KEY (IDmem, IDpro),
-    rolemem ENUM('chef de projet', 'membre') NOT NULL DEFAULT 'membre',
+    rolemem ENUM('CHEF_DE_PROJET', 'MEMBRE') NOT NULL DEFAULT 'MEMBRE',
     FOREIGN KEY (IDmem) REFERENCES Membre(IDmem) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (IDpro) REFERENCES Projet(IDpro) ON DELETE CASCADE ON UPDATE CASCADE
 );
