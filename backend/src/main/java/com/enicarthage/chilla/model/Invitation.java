@@ -1,9 +1,11 @@
 package com.enicarthage.chilla.model;
 
+import java.time.LocalDate;
+
 public class Invitation {
     private int IDinvit;
     private Statut statut;
-    private String dateevoi;
+    private LocalDate dateevoi;
     private int IDpro;
     private int IDemetteur;
     private int IDrecepteur;
@@ -11,7 +13,7 @@ public class Invitation {
     public Invitation() {
         this.IDinvit = 0;
         this.statut = Statut.EN_ATTENTE;
-        this.dateevoi = "";
+        this.dateevoi = null;
         this.IDpro = 0;
         this.IDemetteur = 0;
         this.IDrecepteur = 0;
@@ -34,11 +36,11 @@ public class Invitation {
         this.statut = statut;
     }
 
-    public String getDateevoi() {
+    public LocalDate getDateevoi() {
         return dateevoi;
     }
 
-    public void setDateevoi(String dateevoi) {
+    public void setDateevoi(LocalDate dateevoi) {
         this.dateevoi = dateevoi;
     }
 

@@ -66,7 +66,7 @@ public class Projet {
     public void setEstarchive(Boolean estarchive) {
         this.estarchive = estarchive;
     }
-
+    
     // Override toString() method for better representation
     @Override
     public String toString() {
