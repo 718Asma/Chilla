@@ -1,0 +1,1766 @@
+{
+  "info": {
+    "name": "Chilla - API Gestion de projet",
+    "description": "Collection de test du backend Chilla. Lancer les dossiers dans l'ordre 1 à 7. Les identifiants sont mémorisés automatiquement dans les variables de la collection. L'en-tête X-Membre-Id tient lieu d'authentification.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1 - Membres",
+      "item": [
+        {
+          "name": "Inscription membre 1 (chef)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/membres/inscription",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "inscription"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Ben Ali\",\n  \"prenom\": \"Sami\",\n  \"email\": \"{{email1}}\",\n  \"motDePasse\": \"{{motDePasse1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Génère un email unique et mémorise membreId."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('email1', 'chef.' + Date.now() + '@chilla.test');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j && j.IDmem !== undefined) pm.collectionVariables.set('membreId', j.IDmem);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inscription membre 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/membres/inscription",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "inscription"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Trabelsi\",\n  \"prenom\": \"Yasmine\",\n  \"email\": \"{{email2}}\",\n  \"motDePasse\": \"{{motDePasse2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Second utilisateur, nécessaire pour tester invitations, rôles et assignations."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('email2', 'membre.' + Date.now() + '@chilla.test');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j && j.IDmem !== undefined) pm.collectionVariables.set('membre2Id', j.IDmem);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Connexion membre 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/membres/connexion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "connexion"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email1}}\",\n  \"motDePasse\": \"{{motDePasse1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j && j.IDmem !== undefined) pm.collectionVariables.set('membreId', j.IDmem);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Connexion membre 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/membres/connexion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "connexion"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email2}}\",\n  \"motDePasse\": \"{{motDePasse2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j && j.IDmem !== undefined) pm.collectionVariables.set('membre2Id', j.IDmem);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lister les membres",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/membres",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consulter un membre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/membres/{{membreId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "{{membreId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modifier le profil",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/membres/{{membreId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "{{membreId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Ben Ali\",\n  \"prenom\": \"Sami\",\n  \"email\": \"{{email1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Projets du membre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/membres/{{membreId}}/projets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "{{membreId}}",
+                "projets"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Projets actifs du membre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/membres/{{membreId}}/projets/actifs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "{{membreId}}",
+                "projets",
+                "actifs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Tâches du membre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/membres/{{membreId}}/taches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "{{membreId}}",
+                "taches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Changer le mot de passe",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/membres/{{membreId}}/mot-de-passe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "{{membreId}}",
+                "mot-de-passe"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ancienMotDePasse\": \"{{motDePasse1}}\",\n  \"nouveauMotDePasse\": \"{{nouveauMotDePasse}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Met à jour la variable motDePasse1 si le changement réussit."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) pm.collectionVariables.set('motDePasse1', pm.collectionVariables.get('nouveauMotDePasse'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2 - Projets",
+      "item": [
+        {
+          "name": "Lister tous les projets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Créer un projet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libelle\": \"Chilla - Gestion de projet\",\n  \"description\": \"Application de gestion de projet agile\",\n  \"dateDebut\": \"2026-11-10\",\n  \"dateFin\": \"2027-03-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Le créateur devient CHEF_DE_PROJET. Mémorise projetId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j && j.IDpro !== undefined) pm.collectionVariables.set('projetId', j.IDpro);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consulter un projet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modifier un projet",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libelle\": \"Chilla - Gestion de projet (v2)\",\n  \"description\": \"Description mise à jour\",\n  \"dateDebut\": \"2026-11-10\",\n  \"dateFin\": \"2027-04-30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Archiver un projet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/archiver",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "archiver"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Désarchiver un projet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/desarchiver",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "desarchiver"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 - Équipe et invitations",
+      "item": [
+        {
+          "name": "Inviter un membre par email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "invitations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Envoyée par le chef au membre 2. Mémorise invitationId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j && j.IDinvit !== undefined) pm.collectionVariables.set('invitationId', j.IDinvit);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "(Alternative) Inviter par idRecepteur",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "invitations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idRecepteur\": \"{{membre2Id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "À utiliser à la place de l'invitation par email (une seule invitation en attente par membre)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j && j.IDinvit !== undefined) pm.collectionVariables.set('invitationId', j.IDinvit);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invitations reçues (membre 2)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Invitations en attente (membre 2)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invitations/en-attente",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations",
+                "en-attente"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consulter une invitation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invitations/{{invitationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations",
+                "{{invitationId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Accepter l'invitation (membre 2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invitations/{{invitationId}}/accepter",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations",
+                "{{invitationId}}",
+                "accepter"
+              ]
+            }
+          }
+        },
+        {
+          "name": "(Alternative) Refuser l'invitation (membre 2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invitations/{{invitationId}}/refuser",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations",
+                "{{invitationId}}",
+                "refuser"
+              ]
+            },
+            "description": "À utiliser à la place d'accepter."
+          }
+        },
+        {
+          "name": "(Alternative) Annuler l'invitation (chef)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invitations/{{invitationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations",
+                "{{invitationId}}"
+              ]
+            },
+            "description": "À utiliser tant que l'invitation est en attente."
+          }
+        },
+        {
+          "name": "Membres du projet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/membres",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "membres"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consulter le rôle d'un membre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/membres/{{membre2Id}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "membres",
+                "{{membre2Id}}",
+                "role"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Changer le rôle d'un membre",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/membres/{{membre2Id}}/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "membres",
+                "{{membre2Id}}",
+                "role"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"MEMBRE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Valeurs possibles : CHEF_DE_PROJET, MEMBRE."
+          }
+        }
+      ],
+      "description": "Nécessite que le projet existe (dossier 2). Le membre 2 doit accepter pour rejoindre le projet."
+    },
+    {
+      "name": "4 - Sprints",
+      "item": [
+        {
+          "name": "Créer un sprint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/sprints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "sprints"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Sprint 1\",\n  \"objectif\": \"Mettre en place l'authentification et les projets\",\n  \"dateDebut\": \"2026-11-10\",\n  \"dateFin\": \"2026-11-24\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j && j.IDsp !== undefined) pm.collectionVariables.set('sprintId', j.IDsp);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lister les sprints du projet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/sprints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "sprints"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consulter un sprint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sprints/{{sprintId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sprints",
+                "{{sprintId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modifier un sprint",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sprints/{{sprintId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sprints",
+                "{{sprintId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Sprint 1 (révisé)\",\n  \"objectif\": \"Objectif mis à jour\",\n  \"dateDebut\": \"2026-11-10\",\n  \"dateFin\": \"2026-11-27\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Démarrer un sprint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sprints/{{sprintId}}/demarrer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sprints",
+                "{{sprintId}}",
+                "demarrer"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sprint en cours du projet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/sprints/en-cours",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "sprints",
+                "en-cours"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Changer l'état (générique)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sprints/{{sprintId}}/etat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sprints",
+                "{{sprintId}}",
+                "etat"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etat\": \"EN_COURS\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Valeurs : NON_COMMENCE, EN_COURS, TERMINE, ANNULE."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 - Tâches",
+      "item": [
+        {
+          "name": "Créer une tâche",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/taches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "taches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSprint\": \"{{sprintId}}\",\n  \"idMembreAssigne\": \"{{membreId}}\",\n  \"libelle\": \"Créer la page de connexion\",\n  \"description\": \"Formulaire + appel à POST /membres/connexion\",\n  \"dateEcheance\": \"2026-11-20\",\n  \"estimation\": 5,\n  \"position\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j && j.IDtach !== undefined) pm.collectionVariables.set('tacheId', j.IDtach);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lister les tâches du projet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/taches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "taches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lister les tâches du sprint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sprints/{{sprintId}}/taches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sprints",
+                "{{sprintId}}",
+                "taches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consulter une tâche",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/taches/{{tacheId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "taches",
+                "{{tacheId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Modifier une tâche",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/taches/{{tacheId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "taches",
+                "{{tacheId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idSprint\": \"{{sprintId}}\",\n  \"idMembreAssigne\": \"{{membreId}}\",\n  \"libelle\": \"Créer la page de connexion (v2)\",\n  \"description\": \"Description mise à jour\",\n  \"dateEcheance\": \"2026-11-22\",\n  \"estimation\": 8,\n  \"position\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Changer l'état d'une tâche",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/taches/{{tacheId}}/etat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "taches",
+                "{{tacheId}}",
+                "etat"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"etat\": \"EN_COURS\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Valeurs : NON_COMMENCE, EN_COURS, TERMINE, ANNULE."
+          }
+        },
+        {
+          "name": "Assigner une tâche au membre 2",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/taches/{{tacheId}}/assignation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "taches",
+                "{{tacheId}}",
+                "assignation"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idMembre\": \"{{membre2Id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Le membre 2 doit avoir accepté l'invitation."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 - Notifications",
+      "item": [
+        {
+          "name": "Lister les notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            },
+            "description": "Acteur = membre 2 (il reçoit l'invitation et l'assignation). Change l'en-tête pour tester le chef."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (Array.isArray(j) && j.length) pm.collectionVariables.set('notificationId', j[0].IDnotif);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lister les notifications non lues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/non-lues",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "non-lues"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Compter les notifications non lues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/non-lues/nombre",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "non-lues",
+                "nombre"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Marquer une notification comme lue",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/lue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notificationId}}",
+                "lue"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Marquer toutes comme lues",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/lues",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "lues"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Supprimer une notification",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notificationId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7 - Fin de sprint et nettoyage",
+      "item": [
+        {
+          "name": "Terminer le sprint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sprints/{{sprintId}}/terminer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sprints",
+                "{{sprintId}}",
+                "terminer"
+              ]
+            }
+          }
+        },
+        {
+          "name": "(Alternative) Annuler le sprint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sprints/{{sprintId}}/annuler",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sprints",
+                "{{sprintId}}",
+                "annuler"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Supprimer la tâche",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/taches/{{tacheId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "taches",
+                "{{tacheId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Supprimer le sprint",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sprints/{{sprintId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sprints",
+                "{{sprintId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Retirer le membre 2 du projet",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/membres/{{membre2Id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "membres",
+                "{{membre2Id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "(Alternative) Le membre 2 quitte le projet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membre2Id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}/quitter",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}",
+                "quitter"
+              ]
+            },
+            "description": "À utiliser à la place de « Retirer le membre 2 »."
+          }
+        },
+        {
+          "name": "Supprimer le projet",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Membre-Id",
+                "value": "{{membreId}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/projets/{{projetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "projets",
+                "{{projetId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Supprimer le compte du membre 2",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/membres/{{membre2Id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "{{membre2Id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motDePasse\": \"{{motDePasse2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Supprimer le compte du membre 1",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/membres/{{membreId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "membres",
+                "{{membreId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motDePasse\": \"{{motDePasse1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "description": "Destructif : à lancer en dernier. Les tâches assignées à un membre bloquent la suppression de son compte."
+    }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Statut 2xx', function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "membreId",
+      "value": ""
+    },
+    {
+      "key": "membre2Id",
+      "value": ""
+    },
+    {
+      "key": "projetId",
+      "value": ""
+    },
+    {
+      "key": "sprintId",
+      "value": ""
+    },
+    {
+      "key": "tacheId",
+      "value": ""
+    },
+    {
+      "key": "invitationId",
+      "value": ""
+    },
+    {
+      "key": "notificationId",
+      "value": ""
+    },
+    {
+      "key": "email1",
+      "value": ""
+    },
+    {
+      "key": "email2",
+      "value": ""
+    },
+    {
+      "key": "motDePasse1",
+      "value": "Motdepasse123!"
+    },
+    {
+      "key": "motDePasse2",
+      "value": "Motdepasse123!"
+    },
+    {
+      "key": "nouveauMotDePasse",
+      "value": "NouveauMdp456!"
+    }
+  ]
+}
