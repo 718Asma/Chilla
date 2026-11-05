@@ -14,7 +14,7 @@ public final class DatabaseConnection {
 
         private static final String HOST = "localhost";
         private static final int PORT = 3306;
-        private static final String DATABASE = "nom_base_donnees";
+        private static final String DATABASE = "chilla";
         private static final String USER = "root";
         private static final String PASSWORD = "";
         private static final String OPTIONS = "?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
