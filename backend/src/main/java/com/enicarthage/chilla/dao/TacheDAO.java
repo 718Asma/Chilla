@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -170,7 +171,7 @@ public class TacheDAO {
         tache.setIDtach(result.getInt("IDtach"));
         tache.setLabtach(result.getString("labtach"));
         tache.setDescrtach(result.getString("descrtach"));
-        tache.setDatecreatach(result.getObject("datecreatach", LocalDate.class));
+        tache.setDatecreatach(result.getObject("datecreatach", LocalDateTime.class));
         tache.setDateeche(result.getObject("dateeche", LocalDate.class));
         tache.setEstim(result.getInt("estim"));
         tache.setEtat(Etattach.valueOf(result.getString("etattach")));

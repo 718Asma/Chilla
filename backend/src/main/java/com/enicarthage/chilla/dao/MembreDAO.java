@@ -9,7 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -142,7 +142,7 @@ public class MembreDAO {
         membre.setPrenommem(result.getString("prenommem"));
         membre.setEmailmem(result.getString("emailmem"));
         membre.setMotdepassemem(result.getString("motdepassemem"));
-        membre.setDatecreamem(result.getObject("datecreamem", LocalDate.class));
+        membre.setDatecreamem(result.getObject("datecreamem", LocalDateTime.class));
         return membre;
     }
 }

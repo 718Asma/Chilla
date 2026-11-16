@@ -11,7 +11,7 @@ import com.enicarthage.chilla.model.Projet;
 import com.enicarthage.chilla.model.Rolemem;
 import com.enicarthage.chilla.model.Statut;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,7 +58,7 @@ public class InvitationService {
 
         Invitation invitation = new Invitation();
         invitation.setStatut(Statut.EN_ATTENTE);
-        invitation.setDateevoi(LocalDate.now());
+        invitation.setDateevoi(LocalDateTime.now());
         invitation.setIDpro(idProjet);
         invitation.setIDemetteur(idEmetteur);
         invitation.setIDrecepteur(recepteur.getIDmem());

@@ -10,7 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -141,7 +141,7 @@ public class InvitationDAO {
         Invitation invitation = new Invitation();
         invitation.setIDinvit(result.getInt("IDinvit"));
         invitation.setStatut(Statut.valueOf(result.getString("statut")));
-        invitation.setDateevoi(result.getObject("dateevoi", LocalDate.class));
+        invitation.setDateevoi(result.getObject("dateevoi", LocalDateTime.class));
         invitation.setIDpro(result.getInt("IDpro"));
         invitation.setIDemetteur(result.getInt("IDemetteur"));
         invitation.setIDrecepteur(result.getInt("IDrecepteur"));

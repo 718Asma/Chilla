@@ -8,17 +8,28 @@ import com.enicarthage.chilla.controller.NotificationController;
 import com.enicarthage.chilla.controller.ProjetController;
 import com.enicarthage.chilla.controller.SprintController;
 import com.enicarthage.chilla.controller.TacheController;
+import com.enicarthage.chilla.dto.AssignationRequest;
+import com.enicarthage.chilla.dto.ConnexionRequest;
+import com.enicarthage.chilla.dto.DtoMapper;
+import com.enicarthage.chilla.dto.ErreurResponse;
+import com.enicarthage.chilla.dto.EtatRequest;
+import com.enicarthage.chilla.dto.InscriptionRequest;
+import com.enicarthage.chilla.dto.InvitationRequest;
+import com.enicarthage.chilla.dto.MessageResponse;
+import com.enicarthage.chilla.dto.MotDePasseRequest;
+import com.enicarthage.chilla.dto.ProfilRequest;
+import com.enicarthage.chilla.dto.ProjetRequest;
+import com.enicarthage.chilla.dto.RoleRequest;
+import com.enicarthage.chilla.dto.SprintRequest;
+import com.enicarthage.chilla.dto.SuppressionCompteRequest;
+import com.enicarthage.chilla.dto.TacheRequest;
 import com.enicarthage.chilla.exception.AuthentificationException;
-import com.enicarthage.chilla.model.Membre;
 import com.enicarthage.chilla.service.AuthService;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializer;
 import com.sun.net.httpserver.HttpExchange;
@@ -86,12 +97,12 @@ public class Router {
             Reponse reponse = router(methode, segments, exchange);
             envoyer(exchange, reponse.statut(), reponse.corps());
         } catch (HttpErreur e) {
-            envoyer(exchange, e.statut, json("erreur", e.getMessage()));
+            envoyer(exchange, e.statut, jsonErreur(e.getMessage()));
         } catch (IllegalArgumentException | JsonParseException e) {
-            envoyer(exchange, 400, json("erreur", "Requête invalide : " + e.getMessage()));
+            envoyer(exchange, 400, jsonErreur("Requête invalide : " + e.getMessage()));
         } catch (Exception e) {
             e.printStackTrace();
-            envoyer(exchange, 500, json("erreur", "Erreur interne du serveur."));
+            envoyer(exchange, 500, jsonErreur("Erreur interne du serveur."));
         }
     }
 
@@ -122,9 +133,9 @@ public class Router {
 
     // ---------------------------------------------------------
     // AUTH (les deux premières routes sont publiques, le reste exige un jeton)
-    // POST /auth/inscription (nom, prenom, email, motDePasse) -> { token, membre }
-    // POST /auth/connexion (email, motDePasse) -> { token, membre }
-    // GET /auth/moi (membre du jeton)
+    // POST /auth/inscription (InscriptionRequest) -> SessionResponse
+    // POST /auth/connexion (ConnexionRequest) -> SessionResponse
+    // GET /auth/moi -> MembreResponse
     //
     // Toutes les autres routes exigent : Authorization: Bearer <token>
     // ---------------------------------------------------------
@@ -137,16 +148,15 @@ public class Router {
         switch (s[2]) {
             case "inscription": {
                 exiger(m, "POST", s);
-                JsonObject b = corps(ex);
-                return rep(c, c.inscrire(texte(b, "nom"), texte(b, "prenom"), texte(b, "email"),
-                        texte(b, "motDePasse")), 201);
+                InscriptionRequest b = corps(ex, InscriptionRequest.class);
+                return rep(c, c.inscrire(b.nom(), b.prenom(), b.email(), b.motDePasse()), 201);
             }
             case "connexion": {
                 exiger(m, "POST", s);
-                JsonObject b = corps(ex);
-                boolean ok = c.connecter(texte(b, "email"), texte(b, "motDePasse"));
+                ConnexionRequest b = corps(ex, ConnexionRequest.class);
+                boolean ok = c.connecter(b.email(), b.motDePasse());
                 if (!ok) {
-                    return new Reponse(401, json("erreur", c.getMessage()));
+                    return new Reponse(401, jsonErreur(c.getMessage()));
                 }
                 return rep(c, true, 200);
             }
@@ -162,9 +172,9 @@ public class Router {
     // MEMBRES
     // GET /membres
     // GET /membres/{id}
-    // PUT /membres/{id} (nom, prenom, email) : uniquement son propre compte
-    // DELETE /membres/{id} (corps : motDePasse) : uniquement son propre compte
-    // PUT /membres/{id}/mot-de-passe (ancienMotDePasse, nouveauMotDePasse) : uniquement le sien
+    // PUT /membres/{id} (ProfilRequest) : uniquement son propre compte
+    // DELETE /membres/{id} (SuppressionCompteRequest) : uniquement son propre compte
+    // PUT /membres/{id}/mot-de-passe (MotDePasseRequest) : uniquement le sien
     // GET /membres/{id}/projets
     // GET /membres/{id}/projets/actifs
     // GET /membres/{id}/taches
@@ -189,15 +199,13 @@ public class Router {
                     return rep(c, c.consulterMembre(id), 200);
                 case "PUT": {
                     exigerSoiMeme(ex, id);
-                    JsonObject b = corps(ex);
-                    boolean ok = c.modifierProfil(id, texte(b, "nom"), texte(b, "prenom"), texte(b, "email"));
-                    masquer(c, ok);
-                    return rep(c, ok, 200);
+                    ProfilRequest b = corps(ex, ProfilRequest.class);
+                    return rep(c, c.modifierProfil(id, b.nom(), b.prenom(), b.email()), 200);
                 }
                 case "DELETE": {
                     exigerSoiMeme(ex, id);
-                    JsonObject b = corps(ex);
-                    return rep(c, c.supprimerCompte(id, texte(b, "motDePasse")), 200);
+                    SuppressionCompteRequest b = corps(ex, SuppressionCompteRequest.class);
+                    return rep(c, c.supprimerCompte(id, b.motDePasse()), 200);
                 }
                 default:
                     throw nonSupportee(m, s);
@@ -210,10 +218,9 @@ public class Router {
                 case "mot-de-passe": {
                     exiger(m, "PUT", s);
                     exigerSoiMeme(ex, id);
-                    JsonObject b = corps(ex);
+                    MotDePasseRequest b = corps(ex, MotDePasseRequest.class);
                     MembreController c = new MembreController();
-                    return rep(c, c.changerMotDePasse(id, texte(b, "ancienMotDePasse"),
-                            texte(b, "nouveauMotDePasse")), 200);
+                    return rep(c, c.changerMotDePasse(id, b.ancienMotDePasse(), b.nouveauMotDePasse()), 200);
                 }
                 case "projets": {
                     exiger(m, "GET", s);
@@ -243,24 +250,23 @@ public class Router {
     // ---------------------------------------------------------
     // PROJETS (+ équipe, sprints, tâches et invitations du projet)
     // GET /projets
-    // POST /projets (libelle, description, dateDebut, dateFin)
+    // POST /projets (ProjetRequest)
     // GET /projets/{id}
-    // PUT /projets/{id}
+    // PUT /projets/{id} (ProjetRequest)
     // DELETE /projets/{id}
     // POST /projets/{id}/archiver
     // POST /projets/{id}/desarchiver
     // POST /projets/{id}/quitter
     // GET /projets/{id}/membres
     // GET /projets/{id}/membres/{idMembre}/role
-    // PUT /projets/{id}/membres/{idMembre}/role (role)
+    // PUT /projets/{id}/membres/{idMembre}/role (RoleRequest)
     // DELETE /projets/{id}/membres/{idMembre}
     // GET /projets/{id}/sprints
-    // POST /projets/{id}/sprints (nom, objectif, dateDebut, dateFin)
+    // POST /projets/{id}/sprints (SprintRequest)
     // GET /projets/{id}/sprints/en-cours
     // GET /projets/{id}/taches
-    // POST /projets/{id}/taches (idSprint, idMembreAssigne, libelle,
-    // description, dateEcheance, estimation, position)
-    // POST /projets/{id}/invitations (idRecepteur OU email)
+    // POST /projets/{id}/taches (TacheRequest)
+    // POST /projets/{id}/invitations (InvitationRequest : idRecepteur OU email)
     // ---------------------------------------------------------
     private Reponse routesProjet(String m, String[] s, HttpExchange ex) throws IOException {
         int n = s.length;
@@ -271,9 +277,9 @@ public class Router {
                 case "GET":
                     return rep(c, c.listerTousLesProjets(), 200);
                 case "POST": {
-                    JsonObject b = corps(ex);
-                    return rep(c, c.creerProjet(texte(b, "libelle"), texte(b, "description"),
-                            texte(b, "dateDebut"), texte(b, "dateFin"), acteur(ex)), 201);
+                    ProjetRequest b = corps(ex, ProjetRequest.class);
+                    return rep(c, c.creerProjet(b.libelle(), b.description(),
+                            b.dateDebut(), b.dateFin(), acteur(ex)), 201);
                 }
                 default:
                     throw nonSupportee(m, s);
@@ -288,9 +294,9 @@ public class Router {
                 case "GET":
                     return rep(c, c.consulterProjet(id), 200);
                 case "PUT": {
-                    JsonObject b = corps(ex);
-                    return rep(c, c.modifierProjet(id, texte(b, "libelle"), texte(b, "description"),
-                            texte(b, "dateDebut"), texte(b, "dateFin"), acteur(ex)), 200);
+                    ProjetRequest b = corps(ex, ProjetRequest.class);
+                    return rep(c, c.modifierProjet(id, b.libelle(), b.description(),
+                            b.dateDebut(), b.dateFin(), acteur(ex)), 200);
                 }
                 case "DELETE":
                     return rep(c, c.supprimerProjet(id, acteur(ex)), 200);
@@ -327,9 +333,9 @@ public class Router {
                         return rep(c, c.listerSprintsDuProjet(id), 200);
                     }
                     if (m.equals("POST")) {
-                        JsonObject b = corps(ex);
-                        return rep(c, c.creerSprint(id, texte(b, "nom"), texte(b, "objectif"),
-                                texte(b, "dateDebut"), texte(b, "dateFin"), acteur(ex)), 201);
+                        SprintRequest b = corps(ex, SprintRequest.class);
+                        return rep(c, c.creerSprint(id, b.nom(), b.objectif(),
+                                b.dateDebut(), b.dateFin(), acteur(ex)), 201);
                     }
                     throw nonSupportee(m, s);
                 }
@@ -339,22 +345,21 @@ public class Router {
                         return rep(c, c.listerTachesDuProjet(id), 200);
                     }
                     if (m.equals("POST")) {
-                        JsonObject b = corps(ex);
-                        return rep(c, c.creerTache(id, entierOuZero(b, "idSprint"),
-                                entierOuZero(b, "idMembreAssigne"), texte(b, "libelle"),
-                                texte(b, "description"), texte(b, "dateEcheance"),
-                                entierOuZero(b, "estimation"), entierOuZero(b, "position"),
+                        TacheRequest b = corps(ex, TacheRequest.class);
+                        return rep(c, c.creerTache(id, b.idSprint(), b.idMembreAssigne(), b.libelle(),
+                                b.description(), b.dateEcheance(), b.estimation(), b.position(),
                                 acteur(ex)), 201);
                     }
                     throw nonSupportee(m, s);
                 }
                 case "invitations": {
                     exiger(m, "POST", s);
-                    JsonObject b = corps(ex);
+                    InvitationRequest b = corps(ex, InvitationRequest.class);
                     InvitationController c = new InvitationController();
-                    boolean ok = texte(b, "email") != null
-                            ? c.inviterParEmail(id, acteur(ex), texte(b, "email"))
-                            : c.inviterMembre(id, acteur(ex), entierOuZero(b, "idRecepteur"));
+                    boolean parEmail = b.email() != null && !b.email().isBlank();
+                    boolean ok = parEmail
+                            ? c.inviterParEmail(id, acteur(ex), b.email())
+                            : c.inviterMembre(id, acteur(ex), b.idRecepteur());
                     return rep(c, ok, 201);
                 }
                 default:
@@ -382,9 +387,8 @@ public class Router {
                 return rep(c, c.consulterRole(id, idCible), 200);
             }
             if (m.equals("PUT")) {
-                JsonObject b = corps(ex);
-                String role = texte(b, "role");
-                return rep(c, c.changerRole(id, idCible, role, acteur(ex)), 200);
+                RoleRequest b = corps(ex, RoleRequest.class);
+                return rep(c, c.changerRole(id, idCible, b.role(), acteur(ex)), 200);
             }
             throw nonSupportee(m, s);
         }
@@ -395,9 +399,9 @@ public class Router {
     // ---------------------------------------------------------
     // SPRINTS
     // GET /sprints/{id}
-    // PUT /sprints/{id} (nom, objectif, dateDebut, dateFin)
+    // PUT /sprints/{id} (SprintRequest)
     // DELETE /sprints/{id}
-    // PUT /sprints/{id}/etat (etat)
+    // PUT /sprints/{id}/etat (EtatRequest)
     // POST /sprints/{id}/demarrer
     // POST /sprints/{id}/terminer
     // POST /sprints/{id}/annuler
@@ -416,9 +420,9 @@ public class Router {
                 case "GET":
                     return rep(c, c.consulterSprint(id), 200);
                 case "PUT": {
-                    JsonObject b = corps(ex);
-                    return rep(c, c.modifierSprint(id, texte(b, "nom"), texte(b, "objectif"),
-                            texte(b, "dateDebut"), texte(b, "dateFin"), acteur(ex)), 200);
+                    SprintRequest b = corps(ex, SprintRequest.class);
+                    return rep(c, c.modifierSprint(id, b.nom(), b.objectif(),
+                            b.dateDebut(), b.dateFin(), acteur(ex)), 200);
                 }
                 case "DELETE":
                     return rep(c, c.supprimerSprint(id, acteur(ex)), 200);
@@ -432,9 +436,8 @@ public class Router {
             switch (s[3]) {
                 case "etat": {
                     exiger(m, "PUT", s);
-                    JsonObject b = corps(ex);
-                    String etat = texte(b, "etat");
-                    return rep(c, c.changerEtat(id, etat, acteur(ex)), 200);
+                    EtatRequest b = corps(ex, EtatRequest.class);
+                    return rep(c, c.changerEtat(id, b.etat(), acteur(ex)), 200);
                 }
                 case "demarrer":
                     exiger(m, "POST", s);
@@ -461,11 +464,10 @@ public class Router {
     // ---------------------------------------------------------
     // TACHES
     // GET /taches/{id}
-    // PUT /taches/{id} (idSprint, idMembreAssigne, libelle, description,
-    // dateEcheance, estimation, position)
+    // PUT /taches/{id} (TacheRequest)
     // DELETE /taches/{id}
-    // PUT /taches/{id}/etat (etat)
-    // PUT /taches/{id}/assignation (idMembre)
+    // PUT /taches/{id}/etat (EtatRequest)
+    // PUT /taches/{id}/assignation (AssignationRequest)
     // ---------------------------------------------------------
     private Reponse routesTache(String m, String[] s, HttpExchange ex) throws IOException {
         int n = s.length;
@@ -480,11 +482,9 @@ public class Router {
                 case "GET":
                     return rep(c, c.consulterTache(id), 200);
                 case "PUT": {
-                    JsonObject b = corps(ex);
-                    return rep(c, c.modifierTache(id, entierOuZero(b, "idSprint"),
-                            entierOuZero(b, "idMembreAssigne"), texte(b, "libelle"),
-                            texte(b, "description"), texte(b, "dateEcheance"),
-                            entierOuZero(b, "estimation"), entierOuZero(b, "position"),
+                    TacheRequest b = corps(ex, TacheRequest.class);
+                    return rep(c, c.modifierTache(id, b.idSprint(), b.idMembreAssigne(), b.libelle(),
+                            b.description(), b.dateEcheance(), b.estimation(), b.position(),
                             acteur(ex)), 200);
                 }
                 case "DELETE":
@@ -496,15 +496,14 @@ public class Router {
 
         if (n == 4 && s[3].equals("etat")) {
             exiger(m, "PUT", s);
-            JsonObject b = corps(ex);
-            String etat = texte(b, "etat");
-            return rep(c, c.changerEtat(id, etat, acteur(ex)), 200);
+            EtatRequest b = corps(ex, EtatRequest.class);
+            return rep(c, c.changerEtat(id, b.etat(), acteur(ex)), 200);
         }
 
         if (n == 4 && s[3].equals("assignation")) {
             exiger(m, "PUT", s);
-            JsonObject b = corps(ex);
-            return rep(c, c.assignerTache(id, entierOuZero(b, "idMembre"), acteur(ex)), 200);
+            AssignationRequest b = corps(ex, AssignationRequest.class);
+            return rep(c, c.assignerTache(id, b.idMembre(), acteur(ex)), 200);
         }
 
         throw inconnue(s);
@@ -646,22 +645,13 @@ public class Router {
         if (!ok) {
             // Les controllers transforment toutes les exceptions en message :
             // on ne sait plus distinguer 403 / 404 / 409, d'où un 400 générique.
-            return new Reponse(400, json("erreur", message));
+            return new Reponse(400, jsonErreur(message));
         }
         if (donnees == null) {
-            return new Reponse(statutSucces, json("message", message));
+            return new Reponse(statutSucces, jsonMessage(message));
         }
-        return new Reponse(statutSucces, gson.toJson(donnees));
-    }
-
-    // Ne jamais renvoyer le mot de passe (haché ou non) au client
-    private void masquer(MembreController c, boolean ok) {
-        if (ok) {
-            Membre membre = c.getDonnees();
-            if (membre != null) {
-                membre.setMotdepassemem("");
-            }
-        }
+        // Le modèle est converti en DTO de réponse : le mot de passe n'est jamais exposé
+        return new Reponse(statutSucces, gson.toJson(DtoMapper.convertir(donnees)));
     }
 
     // ---------------------------------------------------------
@@ -677,9 +667,6 @@ public class Router {
     }
 
     // Identifiant du membre authentifié, lu dans le JWT (en-tête Authorization: Bearer ...).
-    // Remplace l'ancien en-tête X-Membre-Id, que n'importe quel client pouvait falsifier.
-    // On relit l'en-tête à chaque appel plutôt que de stocker l'identité dans l'exchange :
-    // les attributs de HttpExchange sont partagés au niveau du contexte, donc risqués entre requêtes.
     private int acteur(HttpExchange ex) {
         return authentifier(ex);
     }
@@ -711,37 +698,15 @@ public class Router {
         }
     }
 
-    // Corps JSON -> objet ; corps vide -> objet vide
-    private JsonObject corps(HttpExchange ex) throws IOException {
+    // Corps JSON -> DTO de requête (Gson). Corps vide -> DTO avec valeurs par défaut
+    // (null / 0) : les controllers et services valident ensuite les champs.
+    private <T> T corps(HttpExchange ex, Class<T> classe) throws IOException {
         String contenu = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         if (contenu.isBlank()) {
-            return new JsonObject();
+            contenu = "{}";
         }
-        JsonElement element = JsonParser.parseString(contenu);
-        if (!element.isJsonObject()) {
-            throw new IllegalArgumentException("le corps doit être un objet JSON.");
-        }
-        return element.getAsJsonObject();
-    }
-
-    // Champ texte (null si absent) : les controllers valident et nettoient
-    // eux-mêmes
-    private String texte(JsonObject o, String cle) {
-        JsonElement e = o.get(cle);
-        return (e == null || e.isJsonNull()) ? null : e.getAsString();
-    }
-
-    // Champ entier (0 si absent) : le service rejettera un id 0 inexistant
-    private int entierOuZero(JsonObject o, String cle) {
-        String valeur = texte(o, cle);
-        if (valeur == null || valeur.isBlank()) {
-            return 0;
-        }
-        try {
-            return Integer.parseInt(valeur.trim());
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("le champ '" + cle + "' doit être un entier.");
-        }
+        T requete = gson.fromJson(contenu, classe);
+        return requete != null ? requete : gson.fromJson("{}", classe);
     }
 
     private void exiger(String methode, String attendue, String[] segments) {
@@ -761,10 +726,12 @@ public class Router {
     // ---------------------------------------------------------
     // Utilitaires de réponse
     // ---------------------------------------------------------
-    private String json(String cle, String valeur) {
-        JsonObject o = new JsonObject();
-        o.addProperty(cle, valeur == null ? "" : valeur);
-        return gson.toJson(o);
+    private String jsonErreur(String message) {
+        return gson.toJson(new ErreurResponse(message == null ? "" : message));
+    }
+
+    private String jsonMessage(String message) {
+        return gson.toJson(new MessageResponse(message == null ? "" : message));
     }
 
     // CORS : le frontend tourne sur une autre origine (ex. localhost:4200 ou 5173).

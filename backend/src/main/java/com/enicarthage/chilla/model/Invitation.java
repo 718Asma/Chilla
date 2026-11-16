@@ -1,11 +1,11 @@
 package com.enicarthage.chilla.model;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class Invitation {
     private int IDinvit;
     private Statut statut;
-    private LocalDate dateevoi;
+    private LocalDateTime dateevoi;
     private int IDpro;
     private int IDemetteur;
     private int IDrecepteur;
@@ -36,11 +36,11 @@ public class Invitation {
         this.statut = statut;
     }
 
-    public LocalDate getDateevoi() {
+    public LocalDateTime getDateevoi() {
         return dateevoi;
     }
 
-    public void setDateevoi(LocalDate dateevoi) {
+    public void setDateevoi(LocalDateTime dateevoi) {
         this.dateevoi = dateevoi;
     }
 

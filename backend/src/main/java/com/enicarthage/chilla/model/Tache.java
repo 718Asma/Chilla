@@ -1,11 +1,12 @@
 package com.enicarthage.chilla.model;
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 
 public class Tache {
     private int IDtach;
     private String labtach;
     private String descrtach;
-    private LocalDate datecreatach;
+    private LocalDateTime datecreatach;
     private LocalDate dateeche;
     private int estim;
     private Etattach etat;
@@ -53,11 +54,11 @@ public class Tache {
         this.descrtach = descrtach;
     }
 
-    public LocalDate getDatecreatach() {
+    public LocalDateTime getDatecreatach() {
         return datecreatach;
     }
 
-    public void setDatecreatach(LocalDate datecreatach) {
+    public void setDatecreatach(LocalDateTime datecreatach) {
         this.datecreatach = datecreatach;
     }
 

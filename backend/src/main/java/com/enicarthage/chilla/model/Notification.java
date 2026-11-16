@@ -1,10 +1,11 @@
 package com.enicarthage.chilla.model;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 
 public class Notification {
     private int IDnotif;
     private String message;
-    private LocalDate datecreanotif;
+    private LocalDateTime datecreanotif;
     private boolean estlue;
     private int IDmem;
 
@@ -33,11 +34,11 @@ public class Notification {
         this.message = message;
     }
 
-    public LocalDate getDateCreaNotif() {
+    public LocalDateTime getDateCreaNotif() {
         return this.datecreanotif;
     }
 
-    public void setDateCreaNotif(LocalDate datecreanotif) {
+    public void setDateCreaNotif(LocalDateTime datecreanotif) {
         this.datecreanotif = datecreanotif;
     }
 

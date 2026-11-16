@@ -9,7 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -166,7 +166,7 @@ public class NotificationDAO {
         Notification notification = new Notification();
         notification.setIDnotif(result.getInt("IDnotif"));
         notification.setMessage(result.getString("message"));
-        notification.setDateCreaNotif(result.getObject("datecreanotif", LocalDate.class));
+        notification.setDateCreaNotif(result.getObject("datecreanotif", LocalDateTime.class));
         notification.setEstlue(result.getBoolean("estlue"));
         notification.setIDmem(result.getInt("IDmem"));
         return notification;

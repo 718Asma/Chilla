@@ -1,5 +1,5 @@
 package com.enicarthage.chilla.model;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class Membre {
     private int IDmem;
@@ -7,7 +7,7 @@ public class Membre {
     private String prenommem;
     private String emailmem;
     private String motdepassemem;
-    private LocalDate datecreamem;
+    private LocalDateTime datecreamem;
 
     public Membre() {
         this.IDmem = 0;
@@ -59,11 +59,11 @@ public class Membre {
         this.motdepassemem = motdepassemem;
     }
 
-    public LocalDate getDatecreamem() {
+    public LocalDateTime getDatecreamem() {
         return datecreamem;
     }
 
-    public void setDatecreamem(LocalDate datecreamem) {
+    public void setDatecreamem(LocalDateTime datecreamem) {
         this.datecreamem = datecreamem;
     }
 
