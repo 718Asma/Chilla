@@ -1,16 +1,16 @@
 package com.enicarthage.chilla.service;
 
-import com.enicarthage.chilla.exception.ResourceNotFoundException;
+import java.util.List;
+
 import com.enicarthage.chilla.dao.MembreDAO;
 import com.enicarthage.chilla.dao.Membre_ProjetDAO;
 import com.enicarthage.chilla.dao.ProjetDAO;
 import com.enicarthage.chilla.dao.TacheDAO;
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.model.Etattach;
 import com.enicarthage.chilla.model.Membre_Projet;
 import com.enicarthage.chilla.model.Rolemem;
 import com.enicarthage.chilla.model.Tache;
-
-import java.util.List;
 
 public class Membre_ProjetService {
 
@@ -53,6 +53,12 @@ public class Membre_ProjetService {
         return membreProjetDAO.findById(idMembre, idProjet)
                 .map(mp -> mp.getRolemem() == Rolemem.CHEF_DE_PROJET)
                 .orElse(false);
+    }
+
+    /** Vrai si les deux membres participent à au moins un projet commun. */
+    public boolean partagentUnProjet(int idA, int idB) {
+        return membreProjetDAO.findByMembre(idA).stream()
+                .anyMatch(mp -> estMembre(mp.getIDpro(), idB));
     }
 
     // ---------- MODIFICATION ----------
@@ -103,7 +109,6 @@ public class Membre_ProjetService {
         }
         membreProjetDAO.delete(idMembreCible, idProjet);
     }
-
 
     private long nombreDeChefs(int idProjet) {
         return membreProjetDAO.findByProjet(idProjet).stream()

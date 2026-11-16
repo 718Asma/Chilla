@@ -1,5 +1,9 @@
 package com.enicarthage.chilla.controller;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+
 import com.enicarthage.chilla.dto.DtoMapper;
 import com.enicarthage.chilla.dto.MembreProjetResponse;
 import com.enicarthage.chilla.dto.MessageResponse;
@@ -7,10 +11,6 @@ import com.enicarthage.chilla.dto.RoleRequest;
 import com.enicarthage.chilla.dto.RoleResponse;
 import com.enicarthage.chilla.model.Rolemem;
 import com.enicarthage.chilla.service.Membre_ProjetService;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
 
 public class Membre_ProjetController {
 
@@ -22,6 +22,25 @@ public class Membre_ProjetController {
 
     public Membre_ProjetController(Membre_ProjetService membreProjetService) {
         this.membreProjetService = membreProjetService;
+    }
+
+    // ---------- CONTROLE D'ACCES (lecture) ----------
+
+    /** Lève SecurityException (403) si le membre ne fait pas partie du projet. */
+    public void verifierMembre(int idProjet, int idMembre) {
+        if (!membreProjetService.estMembre(idProjet, idMembre)) {
+            throw new SecurityException("Vous ne faites pas partie de ce projet.");
+        }
+    }
+
+    /**
+     * Autorise la consultation d'un autre membre seulement s'il partage un projet
+     * avec l'acteur.
+     */
+    public void verifierCoequipier(int idActeur, int idAutre) {
+        if (!membreProjetService.partagentUnProjet(idActeur, idAutre)) {
+            throw new SecurityException("Vous ne pouvez consulter que les membres de vos projets.");
+        }
     }
 
     // ---------- LECTURE ----------

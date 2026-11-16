@@ -1,13 +1,13 @@
 package com.enicarthage.chilla.controller;
 
+import java.util.List;
+
 import com.enicarthage.chilla.dto.DtoMapper;
 import com.enicarthage.chilla.dto.InvitationRequest;
 import com.enicarthage.chilla.dto.InvitationResponse;
 import com.enicarthage.chilla.dto.MessageResponse;
 import com.enicarthage.chilla.model.Invitation;
 import com.enicarthage.chilla.service.InvitationService;
-
-import java.util.List;
 
 public class InvitationController {
 
@@ -53,8 +53,9 @@ public class InvitationController {
 
     // ---------- LECTURE ----------
 
-    public InvitationResponse consulterInvitation(int idInvitation) {
-        return DtoMapper.vers(invitationService.getInvitation(idInvitation));
+    /** Visible par l'émetteur, le destinataire ou le chef du projet. */
+    public InvitationResponse consulterInvitation(int idInvitation, int idActeur) {
+        return DtoMapper.vers(invitationService.getInvitationPourActeur(idInvitation, idActeur));
     }
 
     public List<InvitationResponse> listerInvitationsRecues(int idMembre) {

@@ -1,20 +1,20 @@
 package com.enicarthage.chilla.service;
 
-import com.enicarthage.chilla.exception.ResourceNotFoundException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.enicarthage.chilla.dao.InvitationDAO;
 import com.enicarthage.chilla.dao.MembreDAO;
 import com.enicarthage.chilla.dao.Membre_ProjetDAO;
 import com.enicarthage.chilla.dao.ProjetDAO;
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.model.Invitation;
 import com.enicarthage.chilla.model.Membre;
 import com.enicarthage.chilla.model.Membre_Projet;
 import com.enicarthage.chilla.model.Projet;
 import com.enicarthage.chilla.model.Rolemem;
 import com.enicarthage.chilla.model.Statut;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 public class InvitationService {
 
@@ -115,7 +115,9 @@ public class InvitationService {
 
     // ---------- ANNULATION ----------
 
-    /** Annule une invitation en attente. Réservé à l'émetteur ou au chef du projet. */
+    /**
+     * Annule une invitation en attente. Réservé à l'émetteur ou au chef du projet.
+     */
     public void annuler(int idInvitation, int idActeur) {
         Invitation invitation = getInvitation(idInvitation);
         if (invitation.getIDemetteur() != idActeur) {
@@ -132,6 +134,18 @@ public class InvitationService {
     public Invitation getInvitation(int idInvitation) {
         return invitationDAO.findById(idInvitation)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation introuvable : " + idInvitation));
+    }
+
+    /**
+     * L'invitation, visible par son émetteur, son destinataire ou le chef du
+     * projet.
+     */
+    public Invitation getInvitationPourActeur(int idInvitation, int idActeur) {
+        Invitation invitation = getInvitation(idInvitation);
+        if (invitation.getIDemetteur() != idActeur && invitation.getIDrecepteur() != idActeur) {
+            verifierChef(invitation.getIDpro(), idActeur);
+        }
+        return invitation;
     }
 
     /** Toutes les invitations reçues par un membre . */

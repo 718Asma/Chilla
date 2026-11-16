@@ -17,7 +17,8 @@ public class Main {
             ApiServer serveur = new ApiServer(8081);
             serveur.demarrer();
             System.out.println("Serveur HTTP demarre sur http://localhost:8081");
-            System.out.println("Testez avec Postman : GET http://localhost:8081/projets");
+            // System.out.println("Testez avec Postman : GET
+            // http://localhost:8081/projets");
         } catch (IOException e) {
             System.out.println("Impossible de demarrer le serveur : " + e.getMessage());
         }

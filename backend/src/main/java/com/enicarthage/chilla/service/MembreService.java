@@ -1,13 +1,5 @@
 package com.enicarthage.chilla.service;
 
-import com.enicarthage.chilla.exception.ResourceNotFoundException;
-import com.enicarthage.chilla.dao.MembreDAO;
-import com.enicarthage.chilla.dao.Membre_ProjetDAO;
-import com.enicarthage.chilla.dao.TacheDAO;
-import com.enicarthage.chilla.model.Membre;
-import com.enicarthage.chilla.model.Membre_Projet;
-import com.enicarthage.chilla.model.Rolemem;
-
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -20,13 +12,22 @@ import java.util.regex.Pattern;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
+import com.enicarthage.chilla.dao.MembreDAO;
+import com.enicarthage.chilla.dao.Membre_ProjetDAO;
+import com.enicarthage.chilla.dao.TacheDAO;
+import com.enicarthage.chilla.exception.DaoException;
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
+import com.enicarthage.chilla.model.Membre;
+import com.enicarthage.chilla.model.Membre_Projet;
+import com.enicarthage.chilla.model.Rolemem;
+
 public class MembreService {
 
     private static final int MAX_LONGUEUR = 255;
     private static final int MIN_MOT_DE_PASSE = 8;
     private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
-    private static final int ITERATIONS = 120_000;
+    private static final int ITERATIONS = 600_000;
     private static final int TAILLE_CLE_BITS = 256;
     private static final int TAILLE_SEL_OCTETS = 16;
 
@@ -47,7 +48,8 @@ public class MembreService {
     // ---------- INSCRIPTION / CONNEXION ----------
 
     /**
-     * Inscrit un membre. Avant l'appel, membre.getMotdepassemem() contient le mot de passe
+     * Inscrit un membre. Avant l'appel, membre.getMotdepassemem() contient le mot
+     * de passe
      * en clair ; le service le remplace par son hachage avant l'enregistrement,
      * puis vide le champ dans l'objet retourné.
      */
@@ -61,8 +63,15 @@ public class MembreService {
         }
 
         membre.setMotdepassemem(hacher(membre.getMotdepassemem()));
-        membre.setDatecreamem(null); 
-        membreDAO.create(membre);
+        membre.setDatecreamem(null);
+        try {
+            membreDAO.create(membre);
+        } catch (DaoException e) {
+            if (e.getCause() instanceof java.sql.SQLIntegrityConstraintViolationException) {
+                throw new IllegalArgumentException("Cet email est déjà utilisé.");
+            }
+            throw e;
+        }
         membre.setMotdepassemem("");
         return membre;
     }
@@ -92,7 +101,10 @@ public class MembreService {
 
     // ---------- MODIFICATION ----------
 
-    /** Modifie nom, prénom et email. Le mot de passe et la date de création ne changent pas. */
+    /**
+     * Modifie nom, prénom et email. Le mot de passe et la date de création ne
+     * changent pas.
+     */
     public Membre modifierProfil(Membre membre) {
         Membre existant = getMembre(membre.getIDmem());
         validerIdentite(membre);
@@ -105,7 +117,14 @@ public class MembreService {
 
         membre.setMotdepassemem(existant.getMotdepassemem());
         membre.setDatecreamem(existant.getDatecreamem());
-        membreDAO.update(membre);
+        try {
+            membreDAO.update(membre);
+        } catch (DaoException e) {
+            if (e.getCause() instanceof java.sql.SQLIntegrityConstraintViolationException) {
+                throw new IllegalArgumentException("Cet email est déjà utilisé.");
+            }
+            throw e;
+        }
         membre.setMotdepassemem("");
         return membre;
     }
@@ -146,7 +165,6 @@ public class MembreService {
         }
         membreDAO.delete(idMembre);
     }
-
 
     private boolean estSeulChef(int idProjet) {
         long chefs = membreProjetDAO.findByProjet(idProjet).stream()

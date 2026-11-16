@@ -1,5 +1,6 @@
 package com.enicarthage.chilla.router;
 
+import com.enicarthage.chilla.config.JsonConfig;
 import com.enicarthage.chilla.controller.AuthController;
 import com.enicarthage.chilla.controller.InvitationController;
 import com.enicarthage.chilla.controller.MembreController;
@@ -25,26 +26,25 @@ import com.enicarthage.chilla.exception.AuthentificationException;
 import com.enicarthage.chilla.exception.DaoException;
 import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.service.AuthService;
+import com.enicarthage.chilla.service.NotificationHub;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonSerializer;
 import com.sun.net.httpserver.HttpExchange;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 public class Router {
 
     // Représente une réponse HTTP (statut + corps JSON)
     private record Reponse(int statut, String corps) {
     }
+
+    // Marqueur : la réponse est un flux temps réel déjà ouvert, le dispatcher ne
+    // doit rien envoyer
+    private static final Reponse FLUX_OUVERT = new Reponse(-1, null);
 
     // Erreur HTTP avec un statut précis (404, 405, 401...)
     private static class HttpErreur extends RuntimeException {
@@ -56,20 +56,8 @@ public class Router {
         }
     }
 
-    // Gson configuré pour gérer LocalDate / LocalDateTime
-    private final Gson gson = new GsonBuilder()
-            .registerTypeAdapter(LocalDate.class,
-                    (JsonSerializer<LocalDate>) (src, type, ctx) -> new JsonPrimitive(src.toString()))
-            .registerTypeAdapter(LocalDate.class,
-                    (JsonDeserializer<LocalDate>) (json, type, ctx) -> json.isJsonNull() ? null
-                            : LocalDate.parse(json.getAsString()))
-            .registerTypeAdapter(LocalDateTime.class,
-                    (JsonSerializer<LocalDateTime>) (src, type, ctx) -> new JsonPrimitive(src.toString()))
-            .registerTypeAdapter(LocalDateTime.class,
-                    (JsonDeserializer<LocalDateTime>) (json, type, ctx) -> json.isJsonNull() ? null
-                            : LocalDateTime.parse(json.getAsString()))
-            .disableHtmlEscaping() // garde « ' » et « < » lisibles dans les réponses
-            .create();
+    // Gson partagé avec la diffusion temps réel (dates ISO, pas d'échappement HTML)
+    private final Gson gson = JsonConfig.GSON;
 
     // Vérification des JWT. Créé une seule fois : l'application refuse de démarrer
     // si JWT_SECRET est absent (exception levée par JwtService).
@@ -107,7 +95,9 @@ public class Router {
                 authentifier(exchange);
             }
             Reponse reponse = router(methode, segments, exchange);
-            envoyer(exchange, reponse.statut(), reponse.corps());
+            if (reponse != FLUX_OUVERT) {
+                envoyer(exchange, reponse.statut(), reponse.corps());
+            }
         } catch (HttpErreur e) {
             envoyer(exchange, e.statut, jsonErreur(e.getMessage()));
         } catch (AuthentificationException e) {
@@ -191,29 +181,34 @@ public class Router {
 
     // ---------------------------------------------------------
     // MEMBRES
-    // GET /membres
-    // GET /membres/{id}
+    // GET /membres/{id} : soi-même ou un coéquipier (membre d'un projet commun)
     // PUT /membres/{id} (ProfilRequest) : uniquement son propre compte
-    // DELETE /membres/{id} (SuppressionCompteRequest) : uniquement son propre compte
+    // DELETE /membres/{id} (SuppressionCompteRequest) : uniquement son propre
+    // compte
     // PUT /membres/{id}/mot-de-passe (MotDePasseRequest) : uniquement le sien
-    // GET /membres/{id}/projets
-    // GET /membres/{id}/projets/actifs
-    // GET /membres/{id}/taches
-    // (l'inscription et la connexion sont sous /auth)
+    // GET /membres/{id}/projets : uniquement les siens
+    // GET /membres/{id}/projets/actifs : uniquement les siens
+    // GET /membres/{id}/taches : uniquement les siennes
+    // (l'inscription et la connexion sont sous /auth ; la liste de tous les
+    // membres n'existe plus : elle exposait tous les emails)
     // ---------------------------------------------------------
     private Reponse routesMembre(String m, String[] s, HttpExchange ex) throws IOException {
         int n = s.length;
 
         if (n == 2) {
-            exiger(m, "GET", s);
-            return reponse(200, membreController.listerTousLesMembres());
+            throw inconnue(s);
         }
 
         if (n == 3) {
             int id = entier(s[2]);
             switch (m) {
-                case "GET":
+                case "GET": {
+                    int acteur = acteur(ex);
+                    if (acteur != id) {
+                        membreProjetController.verifierCoequipier(acteur, id);
+                    }
                     return reponse(200, membreController.consulterMembre(id));
+                }
                 case "PUT": {
                     exigerSoiMeme(ex, id);
                     ProfilRequest b = corps(ex, ProfilRequest.class);
@@ -240,9 +235,11 @@ public class Router {
                 }
                 case "projets":
                     exiger(m, "GET", s);
+                    exigerSoiMeme(ex, id);
                     return reponse(200, projetController.listerProjetsDuMembre(id));
                 case "taches":
                     exiger(m, "GET", s);
+                    exigerSoiMeme(ex, id);
                     return reponse(200, tacheController.listerTachesDuMembre(id));
                 default:
                     break;
@@ -251,7 +248,9 @@ public class Router {
 
         if (n == 5 && s[3].equals("projets") && s[4].equals("actifs")) {
             exiger(m, "GET", s);
-            return reponse(200, projetController.listerProjetsActifsDuMembre(entier(s[2])));
+            int id = entier(s[2]);
+            exigerSoiMeme(ex, id);
+            return reponse(200, projetController.listerProjetsActifsDuMembre(id));
         }
 
         throw inconnue(s);
@@ -259,9 +258,9 @@ public class Router {
 
     // ---------------------------------------------------------
     // PROJETS (+ équipe, sprints, tâches et invitations du projet)
-    // GET /projets
+    // GET /projets : uniquement les projets de l'acteur
     // POST /projets (ProjetRequest)
-    // GET /projets/{id}
+    // GET /projets/{id} : réservé aux membres du projet
     // PUT /projets/{id} (ProjetRequest)
     // DELETE /projets/{id}
     // POST /projets/{id}/archiver
@@ -277,6 +276,8 @@ public class Router {
     // GET /projets/{id}/taches
     // POST /projets/{id}/taches (TacheRequest)
     // POST /projets/{id}/invitations (InvitationRequest : idRecepteur OU email)
+    //
+    // Tous les GET sous /projets/{id} exigent d'être membre du projet.
     // ---------------------------------------------------------
     private Reponse routesProjet(String m, String[] s, HttpExchange ex) throws IOException {
         int n = s.length;
@@ -284,7 +285,7 @@ public class Router {
         if (n == 2) {
             switch (m) {
                 case "GET":
-                    return reponse(200, projetController.listerTousLesProjets());
+                    return reponse(200, projetController.listerProjetsDuMembre(acteur(ex)));
                 case "POST": {
                     ProjetRequest b = corps(ex, ProjetRequest.class);
                     return reponse(201, projetController.creerProjet(b, acteur(ex)));
@@ -295,6 +296,12 @@ public class Router {
         }
 
         int id = entier(s[2]);
+
+        // Lecture : réservée aux membres du projet (couvre projet, membres, sprints,
+        // tâches, sprint en cours et rôle)
+        if (m.equals("GET")) {
+            membreProjetController.verifierMembre(id, acteur(ex));
+        }
 
         if (n == 3) {
             switch (m) {
@@ -380,14 +387,14 @@ public class Router {
 
     // ---------------------------------------------------------
     // SPRINTS
-    // GET /sprints/{id}
+    // GET /sprints/{id} : réservé aux membres du projet du sprint
     // PUT /sprints/{id} (SprintRequest)
     // DELETE /sprints/{id}
     // PUT /sprints/{id}/etat (EtatRequest)
     // POST /sprints/{id}/demarrer
     // POST /sprints/{id}/terminer
     // POST /sprints/{id}/annuler
-    // GET /sprints/{id}/taches
+    // GET /sprints/{id}/taches : réservé aux membres du projet du sprint
     // ---------------------------------------------------------
     private Reponse routesSprint(String m, String[] s, HttpExchange ex) throws IOException {
         int n = s.length;
@@ -399,7 +406,7 @@ public class Router {
         if (n == 3) {
             switch (m) {
                 case "GET":
-                    return reponse(200, sprintController.consulterSprint(id));
+                    return reponse(200, sprintController.consulterSprint(id, acteur(ex)));
                 case "PUT": {
                     SprintRequest b = corps(ex, SprintRequest.class);
                     return reponse(200, sprintController.modifierSprint(id, b, acteur(ex)));
@@ -429,7 +436,7 @@ public class Router {
                     return reponse(200, sprintController.annulerSprint(id, acteur(ex)));
                 case "taches":
                     exiger(m, "GET", s);
-                    return reponse(200, tacheController.listerTachesDuSprint(id));
+                    return reponse(200, tacheController.listerTachesDuSprint(id, acteur(ex)));
                 default:
                     break;
             }
@@ -440,7 +447,7 @@ public class Router {
 
     // ---------------------------------------------------------
     // TACHES
-    // GET /taches/{id}
+    // GET /taches/{id} : réservé aux membres du projet de la tâche
     // PUT /taches/{id} (TacheRequest)
     // DELETE /taches/{id}
     // PUT /taches/{id}/etat (EtatRequest)
@@ -456,7 +463,7 @@ public class Router {
         if (n == 3) {
             switch (m) {
                 case "GET":
-                    return reponse(200, tacheController.consulterTache(id));
+                    return reponse(200, tacheController.consulterTache(id, acteur(ex)));
                 case "PUT": {
                     TacheRequest b = corps(ex, TacheRequest.class);
                     return reponse(200, tacheController.modifierTache(id, b, acteur(ex)));
@@ -487,7 +494,7 @@ public class Router {
     // INVITATIONS
     // GET /invitations (reçues)
     // GET /invitations/en-attente
-    // GET /invitations/{id}
+    // GET /invitations/{id} : émetteur, destinataire ou chef du projet
     // DELETE /invitations/{id} (annuler)
     // POST /invitations/{id}/accepter
     // POST /invitations/{id}/refuser
@@ -509,7 +516,7 @@ public class Router {
             int id = entier(s[2]);
             switch (m) {
                 case "GET":
-                    return reponse(200, invitationController.consulterInvitation(id));
+                    return reponse(200, invitationController.consulterInvitation(id, acteur(ex)));
                 case "DELETE":
                     return reponse(200, invitationController.annulerInvitation(id, acteur(ex)));
                 default:
@@ -537,6 +544,7 @@ public class Router {
     // GET /notifications
     // GET /notifications/non-lues
     // GET /notifications/non-lues/nombre
+    // GET /notifications/flux (temps réel : flux Server-Sent Events, reste ouvert)
     // POST /notifications/lues (tout marquer comme lu)
     // PUT /notifications/{id}/lue
     // DELETE /notifications/{id}
@@ -552,6 +560,11 @@ public class Router {
         if (n == 3 && s[2].equals("non-lues")) {
             exiger(m, "GET", s);
             return reponse(200, notificationController.listerNotificationsNonLues(acteur(ex)));
+        }
+
+        if (n == 3 && s[2].equals("flux")) {
+            exiger(m, "GET", s);
+            return ouvrirFlux(ex);
         }
 
         if (n == 3 && s[2].equals("lues")) {
@@ -578,6 +591,28 @@ public class Router {
     }
 
     // ---------------------------------------------------------
+    // Temps réel : GET /notifications/flux
+    // Ouvre un flux Server-Sent Events et le confie au NotificationHub.
+    // La méthode retourne tout de suite (elle ne bloque jamais le serveur) ; la
+    // connexion
+    // reste ouverte et c'est le hub qui y écrit à chaque nouvelle notification.
+    // ---------------------------------------------------------
+    private Reponse ouvrirFlux(HttpExchange ex) throws IOException {
+        int idMembre = acteur(ex);
+        // Compteur de départ : le client se resynchronise à chaque (re)connexion
+        int nonLues = notificationController.compterNotificationsNonLues(idMembre).nombre();
+
+        var h = ex.getResponseHeaders();
+        h.set("Content-Type", "text/event-stream; charset=utf-8");
+        h.set("Cache-Control", "no-cache");
+        h.set("X-Accel-Buffering", "no"); // évite la mise en mémoire tampon par un proxy
+        ex.sendResponseHeaders(200, 0); // 0 = réponse en morceaux : le flux reste ouvert
+
+        NotificationHub.getInstance().abonner(idMembre, ex.getResponseBody(), nonLues);
+        return FLUX_OUVERT;
+    }
+
+    // ---------------------------------------------------------
     // Authentification
     // ---------------------------------------------------------
 
@@ -589,7 +624,8 @@ public class Router {
                 && (segments[2].equals("inscription") || segments[2].equals("connexion"));
     }
 
-    // Identifiant du membre authentifié, lu dans le JWT (en-tête Authorization: Bearer ...).
+    // Identifiant du membre authentifié, lu dans le JWT (en-tête Authorization:
+    // Bearer ...).
     private int acteur(HttpExchange ex) {
         return authentifier(ex);
     }
@@ -617,7 +653,8 @@ public class Router {
         }
     }
 
-    // Corps JSON -> DTO de requête (Gson). Corps vide -> DTO avec valeurs par défaut
+    // Corps JSON -> DTO de requête (Gson). Corps vide -> DTO avec valeurs par
+    // défaut
     // (null / 0) : les controllers et services valident ensuite les champs.
     private <T> T corps(HttpExchange ex, Class<T> classe) throws IOException {
         String contenu = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
@@ -646,7 +683,8 @@ public class Router {
     // Utilitaires de réponse
     // ---------------------------------------------------------
 
-    // Le controller renvoie déjà un DTO (ou une liste de DTO) : on le sérialise tel quel
+    // Le controller renvoie déjà un DTO (ou une liste de DTO) : on le sérialise tel
+    // quel
     private Reponse reponse(int statut, Object resultat) {
         return new Reponse(statut, gson.toJson(resultat));
     }

@@ -1,5 +1,12 @@
 package com.enicarthage.chilla.controller;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+
 import com.enicarthage.chilla.dto.DtoMapper;
 import com.enicarthage.chilla.dto.EtatRequest;
 import com.enicarthage.chilla.dto.MessageResponse;
@@ -8,13 +15,6 @@ import com.enicarthage.chilla.dto.SprintResponse;
 import com.enicarthage.chilla.model.Etatsp;
 import com.enicarthage.chilla.model.Sprint;
 import com.enicarthage.chilla.service.SprintService;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
 
 public class SprintController {
 
@@ -37,15 +37,19 @@ public class SprintController {
 
     // ---------- LECTURE ----------
 
-    public SprintResponse consulterSprint(int idSprint) {
-        return DtoMapper.vers(sprintService.getSprint(idSprint));
+    /** Réservé aux membres du projet du sprint. */
+    public SprintResponse consulterSprint(int idSprint, int idActeur) {
+        return DtoMapper.vers(sprintService.getSprintPourMembre(idSprint, idActeur));
     }
 
     public List<SprintResponse> listerSprintsDuProjet(int idProjet) {
         return sprintService.getSprintsDuProjet(idProjet).stream().map(DtoMapper::vers).toList();
     }
 
-    /** Le sprint en cours (SprintResponse) ou un message s'il n'y en a pas (MessageResponse). */
+    /**
+     * Le sprint en cours (SprintResponse) ou un message s'il n'y en a pas
+     * (MessageResponse).
+     */
     public Object consulterSprintEnCours(int idProjet) {
         Optional<Sprint> enCours = sprintService.getSprintEnCours(idProjet);
         if (enCours.isPresent()) {

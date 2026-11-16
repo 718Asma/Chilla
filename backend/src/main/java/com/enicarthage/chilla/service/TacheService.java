@@ -1,10 +1,12 @@
 package com.enicarthage.chilla.service;
 
-import com.enicarthage.chilla.exception.ResourceNotFoundException;
+import java.util.List;
+
 import com.enicarthage.chilla.dao.Membre_ProjetDAO;
 import com.enicarthage.chilla.dao.ProjetDAO;
 import com.enicarthage.chilla.dao.SprintDAO;
 import com.enicarthage.chilla.dao.TacheDAO;
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.model.Etatsp;
 import com.enicarthage.chilla.model.Etattach;
 import com.enicarthage.chilla.model.Membre_Projet;
@@ -12,8 +14,6 @@ import com.enicarthage.chilla.model.Projet;
 import com.enicarthage.chilla.model.Rolemem;
 import com.enicarthage.chilla.model.Sprint;
 import com.enicarthage.chilla.model.Tache;
-
-import java.util.List;
 
 public class TacheService {
 
@@ -41,7 +41,8 @@ public class TacheService {
     // ---------- CREATION ----------
 
     /**
-     * Crée une tâche (état NON_COMMENCE). Si pos <= 0, elle est placée en fin de sprint.
+     * Crée une tâche (état NON_COMMENCE). Si pos <= 0, elle est placée en fin de
+     * sprint.
      * Remplit l'id généré.
      */
     public Tache creerTache(Tache tache, int idActeur) {
@@ -75,11 +76,29 @@ public class TacheService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tâche introuvable : " + idTache));
     }
 
+    /** La tâche, à condition que l'acteur fasse partie de son projet. */
+    public Tache getTachePourMembre(int idTache, int idActeur) {
+        Tache tache = getTache(idTache);
+        verifierMembreDuProjet(tache.getIDpro(), idActeur);
+        return tache;
+    }
+
     public List<Tache> getTachesDuProjet(int idProjet) {
         return tacheDAO.findByProjet(idProjet);
     }
 
     public List<Tache> getTachesDuSprint(int idSprint) {
+        return tacheDAO.findBySprint(idSprint);
+    }
+
+    /**
+     * Les tâches d'un sprint, à condition que l'acteur fasse partie du projet du
+     * sprint.
+     */
+    public List<Tache> getTachesDuSprintPourMembre(int idSprint, int idActeur) {
+        Sprint sprint = sprintDAO.findById(idSprint)
+                .orElseThrow(() -> new ResourceNotFoundException("Sprint introuvable : " + idSprint));
+        verifierMembreDuProjet(sprint.getIDpro(), idActeur);
         return tacheDAO.findBySprint(idSprint);
     }
 
@@ -89,7 +108,10 @@ public class TacheService {
 
     // ---------- MODIFICATION ----------
 
-    /** Modifie libellé, description, échéance, estimation, position, sprint et assigné. L'état change via changerEtat. */
+    /**
+     * Modifie libellé, description, échéance, estimation, position, sprint et
+     * assigné. L'état change via changerEtat.
+     */
     public Tache modifierTache(Tache tache, int idActeur) {
         Tache existante = getTache(tache.getIDtach());
         getProjetActif(existante.getIDpro());
@@ -117,7 +139,10 @@ public class TacheService {
         return tache;
     }
 
-    /** Change l'état d'une tâche. Autorisé pour le chef de projet et pour le membre assigné. */
+    /**
+     * Change l'état d'une tâche. Autorisé pour le chef de projet et pour le membre
+     * assigné.
+     */
     public void changerEtat(int idTache, Etattach nouvelEtat, int idActeur) {
         Tache tache = getTache(idTache);
         getProjetActif(tache.getIDpro());
@@ -136,7 +161,9 @@ public class TacheService {
         tacheDAO.update(tache);
     }
 
-    /** Réassigne une tâche à un autre membre du projet. Réservé au chef de projet. */
+    /**
+     * Réassigne une tâche à un autre membre du projet. Réservé au chef de projet.
+     */
     public void assigner(int idTache, int idNouveauMembre, int idActeur) {
         Tache tache = getTache(idTache);
         getProjetActif(tache.getIDpro());
@@ -164,7 +191,6 @@ public class TacheService {
         verifierChef(tache.getIDpro(), idActeur);
         tacheDAO.delete(idTache);
     }
-
 
     private Projet getProjetActif(int idProjet) {
         Projet projet = projetDAO.findById(idProjet)
@@ -211,7 +237,7 @@ public class TacheService {
         return max + 1;
     }
 
-    // Règles alignées sur le schéma SQL 
+    // Règles alignées sur le schéma SQL
     private void valider(Tache tache) {
         if (tache.getLabtach() == null || tache.getLabtach().isBlank()) {
             throw new IllegalArgumentException("Le libellé de la tâche est obligatoire.");

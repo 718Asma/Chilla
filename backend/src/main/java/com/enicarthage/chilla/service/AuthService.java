@@ -1,6 +1,7 @@
 package com.enicarthage.chilla.service;
 
 import com.enicarthage.chilla.exception.AuthentificationException;
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.model.Membre;
 
 public class AuthService {
@@ -32,14 +33,19 @@ public class AuthService {
         return new Session(jwtService.generer(cree.getIDmem()), cree);
     }
 
-    /** Vérifie les identifiants et retourne un jeton + le membre (sans mot de passe). */
+    /**
+     * Vérifie les identifiants et retourne un jeton + le membre (sans mot de
+     * passe).
+     */
     public Session connecter(String email, String motDePasse) {
         Membre membre = membreService.authentifier(email, motDePasse);
         membre.setMotdepassemem("");
         return new Session(jwtService.generer(membre.getIDmem()), membre);
     }
 
-    /** Le membre correspondant au jeton (pour restaurer la session côté frontend). */
+    /**
+     * Le membre correspondant au jeton (pour restaurer la session côté frontend).
+     */
     public Membre getMembreCourant(int idMembre) {
         Membre membre = membreService.getMembre(idMembre);
         membre.setMotdepassemem("");
@@ -50,7 +56,9 @@ public class AuthService {
 
     /**
      * Extrait l'id du membre depuis l'en-tête "Authorization: Bearer <jeton>".
-     * Lève AuthentificationException si l'en-tête est absent, mal formé, invalide ou expiré.
+     * Lève AuthentificationException si l'en-tête est absent, mal formé, invalide
+     * ou expiré,
+     * ou si le compte n'existe plus.
      */
     public int identifier(String enteteAuthorization) {
         if (enteteAuthorization == null
@@ -58,6 +66,12 @@ public class AuthService {
             throw new AuthentificationException(
                     "Authentification requise : en-tête « Authorization: Bearer <token> » manquant.");
         }
-        return jwtService.verifier(enteteAuthorization.substring(PREFIXE_BEARER.length()).trim());
+        int id = jwtService.verifier(enteteAuthorization.substring(PREFIXE_BEARER.length()).trim());
+        try {
+            membreService.getMembre(id);
+        } catch (ResourceNotFoundException e) {
+            throw new AuthentificationException("Compte introuvable : veuillez vous reconnecter.");
+        }
+        return id;
     }
 }

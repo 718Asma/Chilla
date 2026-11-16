@@ -1,17 +1,17 @@
 package com.enicarthage.chilla.service;
 
-import com.enicarthage.chilla.exception.ResourceNotFoundException;
+import java.util.List;
+import java.util.Optional;
+
 import com.enicarthage.chilla.dao.Membre_ProjetDAO;
 import com.enicarthage.chilla.dao.ProjetDAO;
 import com.enicarthage.chilla.dao.SprintDAO;
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.model.Etatsp;
 import com.enicarthage.chilla.model.Membre_Projet;
 import com.enicarthage.chilla.model.Projet;
 import com.enicarthage.chilla.model.Rolemem;
 import com.enicarthage.chilla.model.Sprint;
-
-import java.util.List;
-import java.util.Optional;
 
 public class SprintService {
 
@@ -54,6 +54,15 @@ public class SprintService {
                 .orElseThrow(() -> new ResourceNotFoundException("Sprint introuvable : " + idSprint));
     }
 
+    /** Le sprint, à condition que le membre fasse partie de son projet. */
+    public Sprint getSprintPourMembre(int idSprint, int idMembre) {
+        Sprint sprint = getSprint(idSprint);
+        if (membreProjetDAO.findById(idMembre, sprint.getIDpro()).isEmpty()) {
+            throw new SecurityException("Vous ne faites pas partie de ce projet.");
+        }
+        return sprint;
+    }
+
     public List<Sprint> getSprintsDuProjet(int idProjet) {
         return sprintDAO.findByProjet(idProjet);
     }
@@ -67,7 +76,10 @@ public class SprintService {
 
     // ---------- MODIFICATION ----------
 
-    /** Modifie nom, objectif et dates. L'état et le projet ne changent pas par cette méthode. */
+    /**
+     * Modifie nom, objectif et dates. L'état et le projet ne changent pas par cette
+     * méthode.
+     */
     public Sprint modifierSprint(Sprint sprint, int idMembre) {
         Sprint existant = getSprint(sprint.getIDsp());
         Projet projet = getProjetActif(existant.getIDpro());
@@ -111,10 +123,10 @@ public class SprintService {
     /** Supprime un sprint et, en cascade, ses tâches. */
     public void supprimerSprint(int idSprint, int idMembre) {
         Sprint sprint = getSprint(idSprint);
+        getProjetActif(sprint.getIDpro());
         verifierChef(sprint.getIDpro(), idMembre);
         sprintDAO.delete(idSprint);
     }
-
 
     private boolean transitionAutorisee(Etatsp de, Etatsp vers) {
         switch (de) {
@@ -143,7 +155,8 @@ public class SprintService {
         }
     }
 
-    // Règles alignées sur le schéma SQL ; les dates doivent rester dans celles du projet
+    // Règles alignées sur le schéma SQL ; les dates doivent rester dans celles du
+    // projet
     private void valider(Sprint sprint, Projet projet) {
         if (sprint.getNomsp() == null || sprint.getNomsp().isBlank()) {
             throw new IllegalArgumentException("Le nom du sprint est obligatoire.");

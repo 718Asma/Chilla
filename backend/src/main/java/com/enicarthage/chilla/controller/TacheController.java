@@ -1,5 +1,11 @@
 package com.enicarthage.chilla.controller;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+
 import com.enicarthage.chilla.dto.AssignationRequest;
 import com.enicarthage.chilla.dto.DtoMapper;
 import com.enicarthage.chilla.dto.EtatRequest;
@@ -9,12 +15,6 @@ import com.enicarthage.chilla.dto.TacheResponse;
 import com.enicarthage.chilla.model.Etattach;
 import com.enicarthage.chilla.model.Tache;
 import com.enicarthage.chilla.service.TacheService;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
 
 public class TacheController {
 
@@ -37,18 +37,24 @@ public class TacheController {
 
     // ---------- LECTURE ----------
 
-    public TacheResponse consulterTache(int idTache) {
-        return DtoMapper.vers(tacheService.getTache(idTache));
+    /** Réservé aux membres du projet de la tâche. */
+    public TacheResponse consulterTache(int idTache, int idActeur) {
+        return DtoMapper.vers(tacheService.getTachePourMembre(idTache, idActeur));
     }
 
+    /**
+     * L'appartenance au projet est vérifiée par le Router (GET /projets/{id}/...).
+     */
     public List<TacheResponse> listerTachesDuProjet(int idProjet) {
         return tacheService.getTachesDuProjet(idProjet).stream().map(DtoMapper::vers).toList();
     }
 
-    public List<TacheResponse> listerTachesDuSprint(int idSprint) {
-        return tacheService.getTachesDuSprint(idSprint).stream().map(DtoMapper::vers).toList();
+    /** Réservé aux membres du projet du sprint. */
+    public List<TacheResponse> listerTachesDuSprint(int idSprint, int idActeur) {
+        return tacheService.getTachesDuSprintPourMembre(idSprint, idActeur).stream().map(DtoMapper::vers).toList();
     }
 
+    /** Le Router n'autorise que ses propres tâches. */
     public List<TacheResponse> listerTachesDuMembre(int idMembre) {
         return tacheService.getTachesDuMembre(idMembre).stream().map(DtoMapper::vers).toList();
     }
