@@ -63,7 +63,7 @@ public class InvitationDAO {
 
     // READ : une invitation par id (Optional.empty() si absente)
     public Optional<Invitation> findById(int id) {
-        String sql = "SELECT * FROM Invitation WHERE IDinvit = ?";
+        String sql = "SELECT * FROM Invitation WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -103,7 +103,7 @@ public class InvitationDAO {
     // UPDATE : retourne true si une ligne a été modifiée
     public boolean update(Invitation invitation) {
         String sql = "UPDATE Invitation SET statut = ?, dateevoi = COALESCE(?, dateevoi), IDpro = ?, "
-                + "IDemetteur = ?, IDrecepteur = ? WHERE IDinvit = ?";
+                + "IDemetteur = ?, IDrecepteur = ? WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -123,7 +123,7 @@ public class InvitationDAO {
 
     // DELETE : retourne true si une ligne a été supprimée
     public boolean delete(int id) {
-        String sql = "DELETE FROM Invitation WHERE IDinvit = ?";
+        String sql = "DELETE FROM Invitation WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -139,7 +139,7 @@ public class InvitationDAO {
     // Une ligne SQL -> un objet Invitation
     private Invitation map(ResultSet result) throws SQLException {
         Invitation invitation = new Invitation();
-        invitation.setIDinvit(result.getInt("IDinvit"));
+        invitation.setIDinvit(result.getInt("id"));
         invitation.setStatut(Statut.valueOf(result.getString("statut")));
         invitation.setDateevoi(result.getObject("dateevoi", LocalDateTime.class));
         invitation.setIDpro(result.getInt("IDpro"));

@@ -1,6 +1,11 @@
 package com.enicarthage.chilla.controller;
 
-import com.enicarthage.chilla.exception.DaoException;
+import com.enicarthage.chilla.dto.AssignationRequest;
+import com.enicarthage.chilla.dto.DtoMapper;
+import com.enicarthage.chilla.dto.EtatRequest;
+import com.enicarthage.chilla.dto.MessageResponse;
+import com.enicarthage.chilla.dto.TacheRequest;
+import com.enicarthage.chilla.dto.TacheResponse;
 import com.enicarthage.chilla.model.Etattach;
 import com.enicarthage.chilla.model.Tache;
 import com.enicarthage.chilla.service.TacheService;
@@ -8,16 +13,12 @@ import com.enicarthage.chilla.service.TacheService;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
-import java.util.function.Supplier;
 
 public class TacheController {
 
     private final TacheService tacheService;
-
-    private boolean succes;
-    private String message;
-    private Object donnees;
 
     public TacheController() {
         this(new TacheService());
@@ -27,115 +28,68 @@ public class TacheController {
         this.tacheService = tacheService;
     }
 
-
-    public boolean isSucces() {
-        return succes;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    /** Type déduit de la variable  */
-    @SuppressWarnings("unchecked")
-    public <T> T getDonnees() {
-        return (T) donnees;
-    }
-
     // ---------- CREATION ----------
-    // Donnees : la Tache créée 
 
-    public boolean creerTache(int idProjet, int idSprint, int idMembreAssigne, String libelle,
-            String description, String dateEcheance, int estimation, int position, int idActeur) {
-        return executer(() -> tacheService.creerTache(
-                construire(0, idProjet, idSprint, idMembreAssigne, libelle, description,
-                        lireDate(dateEcheance), estimation, position),
-                idActeur), "Tâche créée avec succès.");
-    }
-
-    public boolean creerTache(int idProjet, int idSprint, int idMembreAssigne, String libelle,
-            String description, LocalDate dateEcheance, int estimation, int position, int idActeur) {
-        return executer(() -> tacheService.creerTache(
-                construire(0, idProjet, idSprint, idMembreAssigne, libelle, description,
-                        dateEcheance, estimation, position),
-                idActeur), "Tâche créée avec succès.");
+    public TacheResponse creerTache(int idProjet, TacheRequest requete, int idActeur) {
+        Tache tache = construire(0, idProjet, requete);
+        return DtoMapper.vers(tacheService.creerTache(tache, idActeur));
     }
 
     // ---------- LECTURE ----------
 
-    /** Donnees : Tache */
-    public boolean consulterTache(int idTache) {
-        return executer(() -> tacheService.getTache(idTache), "Tâche chargée.");
+    public TacheResponse consulterTache(int idTache) {
+        return DtoMapper.vers(tacheService.getTache(idTache));
     }
 
-    /** Donnees : List<Tache> */
-    public boolean listerTachesDuProjet(int idProjet) {
-        return executer(() -> tacheService.getTachesDuProjet(idProjet), "Tâches du projet chargées.");
+    public List<TacheResponse> listerTachesDuProjet(int idProjet) {
+        return tacheService.getTachesDuProjet(idProjet).stream().map(DtoMapper::vers).toList();
     }
 
-    /** Donnees : List<Tache> */
-    public boolean listerTachesDuSprint(int idSprint) {
-        return executer(() -> tacheService.getTachesDuSprint(idSprint), "Tâches du sprint chargées.");
+    public List<TacheResponse> listerTachesDuSprint(int idSprint) {
+        return tacheService.getTachesDuSprint(idSprint).stream().map(DtoMapper::vers).toList();
     }
 
-    /** Donnees : List<Tache> */
-    public boolean listerTachesDuMembre(int idMembre) {
-        return executer(() -> tacheService.getTachesDuMembre(idMembre), "Tâches du membre chargées.");
+    public List<TacheResponse> listerTachesDuMembre(int idMembre) {
+        return tacheService.getTachesDuMembre(idMembre).stream().map(DtoMapper::vers).toList();
     }
 
     // ---------- MODIFICATION ----------
-    // Donnees : la Tache modifiée 
 
-    public boolean modifierTache(int idTache, int idSprint, int idMembreAssigne, String libelle,
-            String description, String dateEcheance, int estimation, int position, int idActeur) {
-        return executer(() -> tacheService.modifierTache(
-                construire(idTache, 0, idSprint, idMembreAssigne, libelle, description,
-                        lireDate(dateEcheance), estimation, position),
-                idActeur), "Tâche modifiée avec succès.");
+    public TacheResponse modifierTache(int idTache, TacheRequest requete, int idActeur) {
+        Tache tache = construire(idTache, 0, requete);
+        return DtoMapper.vers(tacheService.modifierTache(tache, idActeur));
     }
 
-    public boolean modifierTache(int idTache, int idSprint, int idMembreAssigne, String libelle,
-            String description, LocalDate dateEcheance, int estimation, int position, int idActeur) {
-        return executer(() -> tacheService.modifierTache(
-                construire(idTache, 0, idSprint, idMembreAssigne, libelle, description,
-                        dateEcheance, estimation, position),
-                idActeur), "Tâche modifiée avec succès.");
+    public MessageResponse changerEtat(int idTache, EtatRequest requete, int idActeur) {
+        tacheService.changerEtat(idTache, lireEtat(requete.etat()), idActeur);
+        return new MessageResponse("État de la tâche modifié.");
     }
 
-    public boolean changerEtat(int idTache, String etat, int idActeur) {
-        return executerSansRetour(() -> tacheService.changerEtat(idTache, lireEtat(etat), idActeur),
-                "État de la tâche modifié.");
-    }
-
-    public boolean changerEtat(int idTache, Etattach etat, int idActeur) {
-        return executerSansRetour(() -> tacheService.changerEtat(idTache, etat, idActeur),
-                "État de la tâche modifié.");
-    }
-
-    public boolean assignerTache(int idTache, int idNouveauMembre, int idActeur) {
-        return executerSansRetour(() -> tacheService.assigner(idTache, idNouveauMembre, idActeur),
-                "Tâche assignée.");
+    public MessageResponse assignerTache(int idTache, AssignationRequest requete, int idActeur) {
+        tacheService.assigner(idTache, requete.idMembre(), idActeur);
+        return new MessageResponse("Tâche assignée.");
     }
 
     // ---------- SUPPRESSION ----------
 
-    public boolean supprimerTache(int idTache, int idActeur) {
-        return executerSansRetour(() -> tacheService.supprimerTache(idTache, idActeur), "Tâche supprimée.");
+    public MessageResponse supprimerTache(int idTache, int idActeur) {
+        tacheService.supprimerTache(idTache, idActeur);
+        return new MessageResponse("Tâche supprimée.");
     }
 
-
-    private Tache construire(int idTache, int idProjet, int idSprint, int idMembre, String libelle,
-            String description, LocalDate dateEcheance, int estimation, int position) {
+    private Tache construire(int idTache, int idProjet, TacheRequest requete) {
         Tache tache = new Tache();
         tache.setIDtach(idTache);
         tache.setIDpro(idProjet);
-        tache.setIDsp(idSprint);
-        tache.setIDmem(idMembre);
-        tache.setLabtach(libelle == null ? null : libelle.trim());
-        tache.setDescrtach(description == null || description.isBlank() ? null : description.trim());
-        tache.setDateeche(dateEcheance);
-        tache.setEstim(estimation);
-        tache.setPos(position);
+        tache.setIDsp(requete.idSprint());
+        tache.setIDmem(requete.idMembreAssigne());
+        tache.setLabtach(requete.libelle() == null ? null : requete.libelle().trim());
+        tache.setDescrtach(requete.description() == null || requete.description().isBlank()
+                ? null
+                : requete.description().trim());
+        tache.setDateeche(lireDate(requete.dateEcheance()));
+        tache.setEstim(requete.estimation());
+        tache.setPos(requete.position());
         return tache;
     }
 
@@ -160,36 +114,5 @@ public class TacheController {
             throw new IllegalArgumentException("État invalide. Valeurs possibles : "
                     + Arrays.toString(Etattach.values()));
         }
-    }
-
-    // Exécute une action du service, mémorise le résultat et retourne true si elle a réussi
-    private boolean executer(Supplier<?> action, String messageSucces) {
-        try {
-            donnees = action.get();
-            succes = true;
-            message = messageSucces;
-        } catch (IllegalArgumentException | IllegalStateException | SecurityException e) {
-            echec(e.getMessage());
-        } catch (DaoException e) {
-            System.err.println("Erreur technique : " + e.getMessage());
-            echec("Une erreur technique est survenue (base de données). Veuillez réessayer.");
-        } catch (RuntimeException e) {
-            System.err.println("Erreur inattendue : " + e);
-            echec("Une erreur inattendue est survenue.");
-        }
-        return succes;
-    }
-
-    private boolean executerSansRetour(Runnable action, String messageSucces) {
-        return executer(() -> {
-            action.run();
-            return null;
-        }, messageSucces);
-    }
-
-    private void echec(String messageErreur) {
-        succes = false;
-        donnees = null;
-        message = messageErreur;
     }
 }

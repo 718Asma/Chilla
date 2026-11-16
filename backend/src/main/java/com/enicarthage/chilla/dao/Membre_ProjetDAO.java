@@ -9,24 +9,31 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-// Table d'association : la clé primaire est composée (IDmem, IDpro), il n'y a pas d'id généré.
+// Table d'association : id auto-incrémenté (convention du guide) + couple (IDmem, IDpro) unique.
 public class Membre_ProjetDAO {
 
-    // CREATE : ajoute un membre dans un projet
+    // CREATE : ajoute un membre dans un projet (remplit l'id généré)
     public void create(Membre_Projet membreProjet) {
         String sql = "INSERT INTO Membre_Projet (IDmem, IDpro, rolemem) VALUES (?, ?, ?)";
 
         try (Connection connection = DatabaseConnection.getConnection();
-                PreparedStatement statement = connection.prepareStatement(sql)) {
+                PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             statement.setInt(1, membreProjet.getIDmem());
             statement.setInt(2, membreProjet.getIDpro());
             statement.setString(3, membreProjet.getRolemem().name());
             statement.executeUpdate();
+
+            try (ResultSet keys = statement.getGeneratedKeys()) {
+                if (keys.next()) {
+                    membreProjet.setId(keys.getInt(1));
+                }
+            }
 
         } catch (SQLException e) {
             throw new DaoException("Erreur lors de l'ajout du membre " + membreProjet.getIDmem()
@@ -132,6 +139,7 @@ public class Membre_ProjetDAO {
     // Une ligne SQL -> un objet Membre_Projet
     private Membre_Projet map(ResultSet result) throws SQLException {
         Membre_Projet membreProjet = new Membre_Projet();
+        membreProjet.setId(result.getInt("id"));
         membreProjet.setIDmem(result.getInt("IDmem"));
         membreProjet.setIDpro(result.getInt("IDpro"));
         membreProjet.setRolemem(Rolemem.valueOf(result.getString("rolemem")));

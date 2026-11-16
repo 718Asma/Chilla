@@ -1,5 +1,6 @@
 package com.enicarthage.chilla.service;
 
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.dao.InvitationDAO;
 import com.enicarthage.chilla.dao.MembreDAO;
 import com.enicarthage.chilla.dao.Membre_ProjetDAO;
@@ -48,7 +49,7 @@ public class InvitationService {
             throw new IllegalArgumentException("Vous ne pouvez pas vous inviter vous-même.");
         }
         Membre recepteur = membreDAO.findById(idRecepteur)
-                .orElseThrow(() -> new IllegalArgumentException("Membre introuvable : " + idRecepteur));
+                .orElseThrow(() -> new ResourceNotFoundException("Membre introuvable : " + idRecepteur));
         if (membreProjetDAO.findById(idRecepteur, idProjet).isPresent()) {
             throw new IllegalStateException("Ce membre fait déjà partie du projet.");
         }
@@ -78,7 +79,7 @@ public class InvitationService {
             throw new IllegalArgumentException("L'email est obligatoire.");
         }
         Membre recepteur = membreDAO.findByEmail(email.trim().toLowerCase())
-                .orElseThrow(() -> new IllegalArgumentException("Aucun membre avec l'email : " + email));
+                .orElseThrow(() -> new ResourceNotFoundException("Aucun membre avec l'email : " + email));
         return inviter(idProjet, idEmetteur, recepteur.getIDmem());
     }
 
@@ -130,7 +131,7 @@ public class InvitationService {
 
     public Invitation getInvitation(int idInvitation) {
         return invitationDAO.findById(idInvitation)
-                .orElseThrow(() -> new IllegalArgumentException("Invitation introuvable : " + idInvitation));
+                .orElseThrow(() -> new ResourceNotFoundException("Invitation introuvable : " + idInvitation));
     }
 
     /** Toutes les invitations reçues par un membre . */
@@ -180,7 +181,7 @@ public class InvitationService {
 
     private Projet getProjetActif(int idProjet) {
         Projet projet = projetDAO.findById(idProjet)
-                .orElseThrow(() -> new IllegalArgumentException("Projet introuvable : " + idProjet));
+                .orElseThrow(() -> new ResourceNotFoundException("Projet introuvable : " + idProjet));
         if (projet.getEstarchive()) {
             throw new IllegalStateException("Le projet est archivé : aucune invitation possible.");
         }

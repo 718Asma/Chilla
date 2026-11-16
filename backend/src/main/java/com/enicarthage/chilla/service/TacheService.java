@@ -1,5 +1,6 @@
 package com.enicarthage.chilla.service;
 
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.dao.Membre_ProjetDAO;
 import com.enicarthage.chilla.dao.ProjetDAO;
 import com.enicarthage.chilla.dao.SprintDAO;
@@ -71,7 +72,7 @@ public class TacheService {
 
     public Tache getTache(int idTache) {
         return tacheDAO.findById(idTache)
-                .orElseThrow(() -> new IllegalArgumentException("Tâche introuvable : " + idTache));
+                .orElseThrow(() -> new ResourceNotFoundException("Tâche introuvable : " + idTache));
     }
 
     public List<Tache> getTachesDuProjet(int idProjet) {
@@ -167,7 +168,7 @@ public class TacheService {
 
     private Projet getProjetActif(int idProjet) {
         Projet projet = projetDAO.findById(idProjet)
-                .orElseThrow(() -> new IllegalArgumentException("Projet introuvable : " + idProjet));
+                .orElseThrow(() -> new ResourceNotFoundException("Projet introuvable : " + idProjet));
         if (projet.getEstarchive()) {
             throw new IllegalStateException("Le projet est archivé : aucune modification n'est possible.");
         }
@@ -193,7 +194,7 @@ public class TacheService {
 
     private void verifierSprintOuvert(int idSprint, int idProjet) {
         Sprint sprint = sprintDAO.findById(idSprint)
-                .orElseThrow(() -> new IllegalArgumentException("Sprint introuvable : " + idSprint));
+                .orElseThrow(() -> new ResourceNotFoundException("Sprint introuvable : " + idSprint));
         if (sprint.getIDpro() != idProjet) {
             throw new IllegalArgumentException("Ce sprint n'appartient pas au projet de la tâche.");
         }

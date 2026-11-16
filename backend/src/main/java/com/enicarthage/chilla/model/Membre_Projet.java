@@ -1,17 +1,27 @@
 package com.enicarthage.chilla.model;
 
 public class Membre_Projet {
+    private int id;
     private int IDmem;
     private int IDpro;
     private Rolemem rolemem;
 
     public Membre_Projet() {
+        this.id = 0;
         this.IDmem = 0;
         this.IDpro = 0;
         this.rolemem = Rolemem.MEMBRE;
     }
 
     //Getters and Setters
+    public int getId() {
+        return this.id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public int getIDmem() {
         return this.IDmem;
     }
@@ -40,7 +50,8 @@ public class Membre_Projet {
     @Override 
     public String toString() {
         return "Membre_Projet{" +
-                "IDmem='" + IDmem + "'" +
+                "id='" + id + "'" +
+                ", IDmem='" + IDmem + "'" +
                 ", IDpro='" + IDpro + "'" +
                 ", rolemem='" + rolemem + "'" +
                 '}';

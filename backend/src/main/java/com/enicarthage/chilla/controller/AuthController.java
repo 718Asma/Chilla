@@ -1,18 +1,21 @@
 package com.enicarthage.chilla.controller;
 
-import com.enicarthage.chilla.exception.DaoException;
+import com.enicarthage.chilla.dto.ConnexionRequest;
+import com.enicarthage.chilla.dto.DtoMapper;
+import com.enicarthage.chilla.dto.InscriptionRequest;
+import com.enicarthage.chilla.dto.MembreResponse;
+import com.enicarthage.chilla.dto.SessionResponse;
+import com.enicarthage.chilla.exception.AuthentificationException;
 import com.enicarthage.chilla.model.Membre;
 import com.enicarthage.chilla.service.AuthService;
 
-import java.util.function.Supplier;
-
+/**
+ * Controller sans état : il reçoit un DTO de requête, appelle le service et renvoie un DTO de réponse.
+ * Les exceptions ne sont pas interceptées ici : le Router les convertit en codes HTTP.
+ */
 public class AuthController {
 
     private final AuthService authService;
-
-    private boolean succes;
-    private String message;
-    private Object donnees;
 
     public AuthController() {
         this(new AuthService());
@@ -22,69 +25,31 @@ public class AuthController {
         this.authService = authService;
     }
 
-
-    public boolean isSucces() {
-        return succes;
+    /** Crée le compte et connecte directement le nouveau membre (token + membre). */
+    public SessionResponse inscrire(InscriptionRequest requete) {
+        Membre membre = new Membre();
+        membre.setNommem(nettoyer(requete.nom()));
+        membre.setPrenommem(nettoyer(requete.prenom()));
+        membre.setEmailmem(nettoyer(requete.email()));
+        membre.setMotdepassemem(requete.motDePasse()); // en clair : haché par le service
+        return DtoMapper.vers(authService.inscrire(membre));
     }
 
-    public String getMessage() {
-        return message;
-    }
-
-    /** Type déduit de la variable */
-    @SuppressWarnings("unchecked")
-    public <T> T getDonnees() {
-        return (T) donnees;
-    }
-
-    // ---------- INSCRIPTION / CONNEXION ----------
-
-    /** Donnees : AuthService.Session (token + membre créé) */
-    public boolean inscrire(String nom, String prenom, String email, String motDePasse) {
-        return executer(() -> {
-            Membre membre = new Membre();
-            membre.setNommem(nom == null ? null : nom.trim());
-            membre.setPrenommem(prenom == null ? null : prenom.trim());
-            membre.setEmailmem(email == null ? null : email.trim());
-            membre.setMotdepassemem(motDePasse); // en clair : haché par le service
-            return authService.inscrire(membre);
-        }, "Inscription réussie.");
-    }
-
-    /** Donnees : AuthService.Session (token + membre connecté) */
-    public boolean connecter(String email, String motDePasse) {
-        return executer(() -> authService.connecter(email, motDePasse), "Connexion réussie.");
-    }
-
-    // ---------- SESSION COURANTE ----------
-
-    /** Donnees : le Membre propriétaire du jeton */
-    public boolean consulterMembreCourant(int idMembre) {
-        return executer(() -> authService.getMembreCourant(idMembre), "Membre connecté chargé.");
-    }
-
-
-    // Exécute une action du service, mémorise le résultat et retourne true si elle a réussi
-    private boolean executer(Supplier<?> action, String messageSucces) {
+    /** Identifiants incorrects -> AuthentificationException (401). */
+    public SessionResponse connecter(ConnexionRequest requete) {
         try {
-            donnees = action.get();
-            succes = true;
-            message = messageSucces;
-        } catch (IllegalArgumentException | IllegalStateException | SecurityException e) {
-            echec(e.getMessage());
-        } catch (DaoException e) {
-            System.err.println("Erreur technique : " + e.getMessage());
-            echec("Une erreur technique est survenue (base de données). Veuillez réessayer.");
-        } catch (RuntimeException e) {
-            System.err.println("Erreur inattendue : " + e);
-            echec("Une erreur inattendue est survenue.");
+            return DtoMapper.vers(authService.connecter(requete.email(), requete.motDePasse()));
+        } catch (IllegalArgumentException e) {
+            throw new AuthentificationException(e.getMessage());
         }
-        return succes;
     }
 
-    private void echec(String messageErreur) {
-        succes = false;
-        donnees = null;
-        message = messageErreur;
+    /** Le membre propriétaire du jeton. */
+    public MembreResponse consulterMembreCourant(int idMembre) {
+        return DtoMapper.vers(authService.getMembreCourant(idMembre));
+    }
+
+    private String nettoyer(String texte) {
+        return texte == null ? null : texte.trim();
     }
 }

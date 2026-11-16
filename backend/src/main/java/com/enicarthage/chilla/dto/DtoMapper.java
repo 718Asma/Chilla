@@ -5,13 +5,9 @@ import com.enicarthage.chilla.model.Membre;
 import com.enicarthage.chilla.model.Membre_Projet;
 import com.enicarthage.chilla.model.Notification;
 import com.enicarthage.chilla.model.Projet;
-import com.enicarthage.chilla.model.Rolemem;
 import com.enicarthage.chilla.model.Sprint;
 import com.enicarthage.chilla.model.Tache;
 import com.enicarthage.chilla.service.AuthService;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /** Convertit les objets du modèle en DTO de réponse (aucune donnée sensible n'est exposée). */
 public final class DtoMapper {
@@ -54,48 +50,7 @@ public final class DtoMapper {
         return new MembreProjetResponse(mp.getIDmem(), mp.getIDpro(), mp.getRolemem());
     }
 
-    /** Convertit ce que renvoie un controller (objet, liste, entier...) en DTO de réponse. */
-    public static Object convertir(Object o) {
-        if (o == null) {
-            return null;
-        }
-        if (o instanceof Membre m) {
-            return vers(m);
-        }
-        if (o instanceof Projet p) {
-            return vers(p);
-        }
-        if (o instanceof Sprint s) {
-            return vers(s);
-        }
-        if (o instanceof Tache t) {
-            return vers(t);
-        }
-        if (o instanceof Invitation i) {
-            return vers(i);
-        }
-        if (o instanceof Notification n) {
-            return vers(n);
-        }
-        if (o instanceof Membre_Projet mp) {
-            return vers(mp);
-        }
-        if (o instanceof AuthService.Session s) {
-            return new SessionResponse(s.token(), vers(s.membre()));
-        }
-        if (o instanceof Rolemem r) {
-            return new RoleResponse(r);
-        }
-        if (o instanceof Integer n) {
-            return new CompteurResponse(n);
-        }
-        if (o instanceof List<?> liste) {
-            List<Object> resultat = new ArrayList<>();
-            for (Object element : liste) {
-                resultat.add(convertir(element));
-            }
-            return resultat;
-        }
-        return o;
+    public static SessionResponse vers(AuthService.Session session) {
+        return new SessionResponse(session.token(), vers(session.membre()));
     }
 }

@@ -61,7 +61,7 @@ public class NotificationDAO {
 
     // READ : une notification par id (Optional.empty() si absente)
     public Optional<Notification> findById(int id) {
-        String sql = "SELECT * FROM Notification WHERE IDnotif = ?";
+        String sql = "SELECT * FROM Notification WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -94,7 +94,7 @@ public class NotificationDAO {
     // UPDATE : retourne true si une ligne a été modifiée
     public boolean update(Notification notification) {
         String sql = "UPDATE Notification SET message = ?, datecreanotif = COALESCE(?, datecreanotif), "
-                + "estlue = ?, IDmem = ? WHERE IDnotif = ?";
+                + "estlue = ?, IDmem = ? WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -114,7 +114,7 @@ public class NotificationDAO {
 
     // UPDATE : marque une notification comme lue
     public boolean markAsRead(int id) {
-        String sql = "UPDATE Notification SET estlue = TRUE WHERE IDnotif = ?";
+        String sql = "UPDATE Notification SET estlue = TRUE WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -129,7 +129,7 @@ public class NotificationDAO {
 
     // DELETE : retourne true si une ligne a été supprimée
     public boolean delete(int id) {
-        String sql = "DELETE FROM Notification WHERE IDnotif = ?";
+        String sql = "DELETE FROM Notification WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -164,7 +164,7 @@ public class NotificationDAO {
     // Une ligne SQL -> un objet Notification
     private Notification map(ResultSet result) throws SQLException {
         Notification notification = new Notification();
-        notification.setIDnotif(result.getInt("IDnotif"));
+        notification.setIDnotif(result.getInt("id"));
         notification.setMessage(result.getString("message"));
         notification.setDateCreaNotif(result.getObject("datecreanotif", LocalDateTime.class));
         notification.setEstlue(result.getBoolean("estlue"));

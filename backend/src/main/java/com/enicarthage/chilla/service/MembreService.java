@@ -1,5 +1,6 @@
 package com.enicarthage.chilla.service;
 
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.dao.MembreDAO;
 import com.enicarthage.chilla.dao.Membre_ProjetDAO;
 import com.enicarthage.chilla.dao.TacheDAO;
@@ -86,7 +87,7 @@ public class MembreService {
 
     public Membre getMembre(int idMembre) {
         return membreDAO.findById(idMembre)
-                .orElseThrow(() -> new IllegalArgumentException("Membre introuvable : " + idMembre));
+                .orElseThrow(() -> new ResourceNotFoundException("Membre introuvable : " + idMembre));
     }
 
     // ---------- MODIFICATION ----------

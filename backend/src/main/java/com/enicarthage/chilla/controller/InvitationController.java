@@ -1,18 +1,17 @@
 package com.enicarthage.chilla.controller;
 
-import com.enicarthage.chilla.exception.DaoException;
+import com.enicarthage.chilla.dto.DtoMapper;
+import com.enicarthage.chilla.dto.InvitationRequest;
+import com.enicarthage.chilla.dto.InvitationResponse;
+import com.enicarthage.chilla.dto.MessageResponse;
+import com.enicarthage.chilla.model.Invitation;
 import com.enicarthage.chilla.service.InvitationService;
 
-import java.util.function.Supplier;
+import java.util.List;
 
 public class InvitationController {
 
     private final InvitationService invitationService;
-
-    // Résultat de la dernière action
-    private boolean succes;
-    private String message;
-    private Object donnees;
 
     public InvitationController() {
         this(new InvitationService());
@@ -22,102 +21,47 @@ public class InvitationController {
         this.invitationService = invitationService;
     }
 
-    // ---------- RESULTAT DE LA DERNIERE ACTION ----------
-
-    public boolean isSucces() {
-        return succes;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    /** Type déduit de la variable */
-    @SuppressWarnings("unchecked")
-    public <T> T getDonnees() {
-        return (T) donnees;
-    }
-
     // ---------- ENVOI ----------
-    // Donnees : l'Invitation créée 
 
-    public boolean inviterMembre(int idProjet, int idEmetteur, int idRecepteur) {
-        return executer(() -> invitationService.inviter(idProjet, idEmetteur, idRecepteur),
-                "Invitation envoyée.");
-    }
-
-    public boolean inviterParEmail(int idProjet, int idEmetteur, String email) {
-        return executer(() -> invitationService.inviterParEmail(idProjet, idEmetteur, email),
-                "Invitation envoyée.");
+    /** Invite par email si l'email est renseigné, sinon par idRecepteur. */
+    public InvitationResponse inviter(int idProjet, InvitationRequest requete, int idEmetteur) {
+        boolean parEmail = requete.email() != null && !requete.email().isBlank();
+        Invitation invitation = parEmail
+                ? invitationService.inviterParEmail(idProjet, idEmetteur, requete.email())
+                : invitationService.inviter(idProjet, idEmetteur, requete.idRecepteur());
+        return DtoMapper.vers(invitation);
     }
 
     // ---------- REPONSE ----------
 
-    public boolean accepterInvitation(int idInvitation, int idMembre) {
-        return executerSansRetour(() -> invitationService.accepter(idInvitation, idMembre),
-                "Invitation acceptée : vous faites maintenant partie du projet.");
+    public MessageResponse accepterInvitation(int idInvitation, int idMembre) {
+        invitationService.accepter(idInvitation, idMembre);
+        return new MessageResponse("Invitation acceptée : vous faites maintenant partie du projet.");
     }
 
-    public boolean refuserInvitation(int idInvitation, int idMembre) {
-        return executerSansRetour(() -> invitationService.refuser(idInvitation, idMembre),
-                "Invitation refusée.");
+    public MessageResponse refuserInvitation(int idInvitation, int idMembre) {
+        invitationService.refuser(idInvitation, idMembre);
+        return new MessageResponse("Invitation refusée.");
     }
 
     // ---------- ANNULATION ----------
 
-    public boolean annulerInvitation(int idInvitation, int idActeur) {
-        return executerSansRetour(() -> invitationService.annuler(idInvitation, idActeur),
-                "Invitation annulée.");
+    public MessageResponse annulerInvitation(int idInvitation, int idActeur) {
+        invitationService.annuler(idInvitation, idActeur);
+        return new MessageResponse("Invitation annulée.");
     }
 
     // ---------- LECTURE ----------
 
-    /** Donnees : Invitation */
-    public boolean consulterInvitation(int idInvitation) {
-        return executer(() -> invitationService.getInvitation(idInvitation), "Invitation chargée.");
+    public InvitationResponse consulterInvitation(int idInvitation) {
+        return DtoMapper.vers(invitationService.getInvitation(idInvitation));
     }
 
-    /** Donnees : List<Invitation>  */
-    public boolean listerInvitationsRecues(int idMembre) {
-        return executer(() -> invitationService.getInvitationsRecues(idMembre), "Invitations chargées.");
+    public List<InvitationResponse> listerInvitationsRecues(int idMembre) {
+        return invitationService.getInvitationsRecues(idMembre).stream().map(DtoMapper::vers).toList();
     }
 
-    /** Donnees : List<Invitation>  */
-    public boolean listerInvitationsEnAttente(int idMembre) {
-        return executer(() -> invitationService.getInvitationsEnAttente(idMembre),
-                "Invitations en attente chargées.");
-    }
-
-    // ---------- METHODES PRIVEES ----------
-
-    // Exécute une action du service, mémorise le résultat et retourne true si elle a réussi
-    private boolean executer(Supplier<?> action, String messageSucces) {
-        try {
-            donnees = action.get();
-            succes = true;
-            message = messageSucces;
-        } catch (IllegalArgumentException | IllegalStateException | SecurityException e) {
-            echec(e.getMessage());
-        } catch (DaoException e) {
-            System.err.println("Erreur technique : " + e.getMessage());
-            echec("Une erreur technique est survenue (base de données). Veuillez réessayer.");
-        } catch (RuntimeException e) {
-            System.err.println("Erreur inattendue : " + e);
-            echec("Une erreur inattendue est survenue.");
-        }
-        return succes;
-    }
-
-    private boolean executerSansRetour(Runnable action, String messageSucces) {
-        return executer(() -> {
-            action.run();
-            return null;
-        }, messageSucces);
-    }
-
-    private void echec(String messageErreur) {
-        succes = false;
-        donnees = null;
-        message = messageErreur;
+    public List<InvitationResponse> listerInvitationsEnAttente(int idMembre) {
+        return invitationService.getInvitationsEnAttente(idMembre).stream().map(DtoMapper::vers).toList();
     }
 }

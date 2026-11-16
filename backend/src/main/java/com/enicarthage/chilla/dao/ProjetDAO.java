@@ -61,7 +61,7 @@ public class ProjetDAO {
 
     // READ : un projet par id (Optional.empty() si absent)
     public Optional<Projet> findById(int id) {
-        String sql = "SELECT * FROM Projet WHERE IDpro = ?";
+        String sql = "SELECT * FROM Projet WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -81,7 +81,7 @@ public class ProjetDAO {
     // UPDATE : retourne true si une ligne a été modifiée
     public boolean update(Projet projet) {
         String sql = "UPDATE Projet SET labpro = ?, descrpro = ?, datedpro = ?, "
-                + "datefpro = ?, estarchive = ? WHERE IDpro = ?";
+                + "datefpro = ?, estarchive = ? WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -101,7 +101,7 @@ public class ProjetDAO {
 
     // DELETE : retourne true si une ligne a été supprimée
     public boolean delete(int id) {
-        String sql = "DELETE FROM Projet WHERE IDpro = ?";
+        String sql = "DELETE FROM Projet WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -118,7 +118,7 @@ public class ProjetDAO {
     // findById)
     private Projet map(ResultSet result) throws SQLException {
         Projet projet = new Projet();
-        projet.setIDpro(result.getInt("IDpro"));
+        projet.setIDpro(result.getInt("id"));
         projet.setLabpro(result.getString("labpro"));
         projet.setDescrpro(result.getString("descrpro"));
         projet.setDatedpro(result.getObject("datedpro", LocalDate.class));

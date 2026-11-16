@@ -63,7 +63,7 @@ public class SprintDAO {
 
     // READ : un sprint par id (Optional.empty() si absent)
     public Optional<Sprint> findById(int id) {
-        String sql = "SELECT * FROM Sprint WHERE IDsp = ?";
+        String sql = "SELECT * FROM Sprint WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -103,7 +103,7 @@ public class SprintDAO {
     // UPDATE : retourne true si une ligne a été modifiée
     public boolean update(Sprint sprint) {
         String sql = "UPDATE Sprint SET nomsp = ?, objectifsp = ?, datedsp = ?, "
-                + "datefsp = ?, etatsp = ?, IDpro = ? WHERE IDsp = ?";
+                + "datefsp = ?, etatsp = ?, IDpro = ? WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -124,7 +124,7 @@ public class SprintDAO {
 
     // DELETE : retourne true si une ligne a été supprimée
     public boolean delete(int id) {
-        String sql = "DELETE FROM Sprint WHERE IDsp = ?";
+        String sql = "DELETE FROM Sprint WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -140,7 +140,7 @@ public class SprintDAO {
     // Une ligne SQL -> un objet Sprint
     private Sprint map(ResultSet result) throws SQLException {
         Sprint sprint = new Sprint();
-        sprint.setIDsp(result.getInt("IDsp"));
+        sprint.setIDsp(result.getInt("id"));
         sprint.setNomsp(result.getString("nomsp"));
         sprint.setObjectifsp(result.getString("objectifsp"));
         sprint.setDatedsp(result.getObject("datedsp", LocalDate.class));

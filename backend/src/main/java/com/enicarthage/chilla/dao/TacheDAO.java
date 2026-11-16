@@ -69,7 +69,7 @@ public class TacheDAO {
 
     // READ : une tâche par id (Optional.empty() si absente)
     public Optional<Tache> findById(int id) {
-        String sql = "SELECT * FROM Tache WHERE IDtach = ?";
+        String sql = "SELECT * FROM Tache WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -108,7 +108,7 @@ public class TacheDAO {
     public boolean update(Tache tache) {
         String sql = "UPDATE Tache SET labtach = ?, descrtach = ?, datecreatach = COALESCE(?, datecreatach), "
                 + "dateeche = ?, estim = ?, etattach = ?, pos = ?, IDpro = ?, IDmem = ?, IDsp = ? "
-                + "WHERE IDtach = ?";
+                + "WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -133,7 +133,7 @@ public class TacheDAO {
 
     // DELETE : retourne true si une ligne a été supprimée
     public boolean delete(int id) {
-        String sql = "DELETE FROM Tache WHERE IDtach = ?";
+        String sql = "DELETE FROM Tache WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -168,7 +168,7 @@ public class TacheDAO {
     // Une ligne SQL -> un objet Tache
     private Tache map(ResultSet result) throws SQLException {
         Tache tache = new Tache();
-        tache.setIDtach(result.getInt("IDtach"));
+        tache.setIDtach(result.getInt("id"));
         tache.setLabtach(result.getString("labtach"));
         tache.setDescrtach(result.getString("descrtach"));
         tache.setDatecreatach(result.getObject("datecreatach", LocalDateTime.class));

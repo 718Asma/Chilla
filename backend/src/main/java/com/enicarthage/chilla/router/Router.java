@@ -10,12 +10,10 @@ import com.enicarthage.chilla.controller.SprintController;
 import com.enicarthage.chilla.controller.TacheController;
 import com.enicarthage.chilla.dto.AssignationRequest;
 import com.enicarthage.chilla.dto.ConnexionRequest;
-import com.enicarthage.chilla.dto.DtoMapper;
 import com.enicarthage.chilla.dto.ErreurResponse;
 import com.enicarthage.chilla.dto.EtatRequest;
 import com.enicarthage.chilla.dto.InscriptionRequest;
 import com.enicarthage.chilla.dto.InvitationRequest;
-import com.enicarthage.chilla.dto.MessageResponse;
 import com.enicarthage.chilla.dto.MotDePasseRequest;
 import com.enicarthage.chilla.dto.ProfilRequest;
 import com.enicarthage.chilla.dto.ProjetRequest;
@@ -24,6 +22,8 @@ import com.enicarthage.chilla.dto.SprintRequest;
 import com.enicarthage.chilla.dto.SuppressionCompteRequest;
 import com.enicarthage.chilla.dto.TacheRequest;
 import com.enicarthage.chilla.exception.AuthentificationException;
+import com.enicarthage.chilla.exception.DaoException;
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.service.AuthService;
 
 import com.google.gson.Gson;
@@ -68,11 +68,22 @@ public class Router {
             .registerTypeAdapter(LocalDateTime.class,
                     (JsonDeserializer<LocalDateTime>) (json, type, ctx) -> json.isJsonNull() ? null
                             : LocalDateTime.parse(json.getAsString()))
+            .disableHtmlEscaping() // garde « ' » et « < » lisibles dans les réponses
             .create();
 
     // Vérification des JWT. Créé une seule fois : l'application refuse de démarrer
     // si JWT_SECRET est absent (exception levée par JwtService).
     private final AuthService authService = new AuthService();
+
+    // Controllers sans état : une seule instance de chaque suffit
+    private final AuthController authController = new AuthController();
+    private final MembreController membreController = new MembreController();
+    private final ProjetController projetController = new ProjetController();
+    private final Membre_ProjetController membreProjetController = new Membre_ProjetController();
+    private final SprintController sprintController = new SprintController();
+    private final TacheController tacheController = new TacheController();
+    private final InvitationController invitationController = new InvitationController();
+    private final NotificationController notificationController = new NotificationController();
 
     // ---------------------------------------------------------
     // Point d'entrée unique pour toutes les requêtes HTTP
@@ -89,6 +100,7 @@ public class Router {
 
         String[] segments = exchange.getRequestURI().getPath().split("/");
 
+        // Gestion centralisée des erreurs : exceptions -> codes HTTP
         try {
             // Sécurisé par défaut : tout est protégé sauf l'inscription et la connexion
             if (!estRoutePublique(methode, segments)) {
@@ -98,8 +110,23 @@ public class Router {
             envoyer(exchange, reponse.statut(), reponse.corps());
         } catch (HttpErreur e) {
             envoyer(exchange, e.statut, jsonErreur(e.getMessage()));
-        } catch (IllegalArgumentException | JsonParseException e) {
-            envoyer(exchange, 400, jsonErreur("Requête invalide : " + e.getMessage()));
+        } catch (AuthentificationException e) {
+            envoyer(exchange, 401, jsonErreur(e.getMessage()));
+        } catch (SecurityException e) {
+            envoyer(exchange, 403, jsonErreur(e.getMessage()));
+        } catch (ResourceNotFoundException e) {
+            envoyer(exchange, 404, jsonErreur(e.getMessage()));
+        } catch (IllegalStateException e) {
+            envoyer(exchange, 409, jsonErreur(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            envoyer(exchange, 400, jsonErreur(e.getMessage()));
+        } catch (JsonParseException e) {
+            envoyer(exchange, 400, jsonErreur(
+                    "Requête invalide : le corps JSON est mal formé ou un champ n'a pas le bon type."));
+        } catch (DaoException e) {
+            System.err.println("Erreur technique : " + e.getMessage());
+            envoyer(exchange, 500,
+                    jsonErreur("Une erreur technique est survenue (base de données). Veuillez réessayer."));
         } catch (Exception e) {
             e.printStackTrace();
             envoyer(exchange, 500, jsonErreur("Erreur interne du serveur."));
@@ -109,7 +136,7 @@ public class Router {
     // Dispatch par première ressource
     private Reponse router(String methode, String[] segments, HttpExchange ex) throws IOException {
         if (segments.length < 2 || segments[1].isBlank()) {
-            throw new HttpErreur(404, "Route vide ou inconnue.");
+            throw new ResourceNotFoundException("Route vide ou inconnue.");
         }
         switch (segments[1]) {
             case "auth":
@@ -127,7 +154,7 @@ public class Router {
             case "notifications":
                 return routesNotification(methode, segments, ex);
             default:
-                throw new HttpErreur(404, "Route inconnue : /" + segments[1]);
+                throw new ResourceNotFoundException("Route inconnue : /" + segments[1]);
         }
     }
 
@@ -143,26 +170,20 @@ public class Router {
         if (s.length != 3) {
             throw inconnue(s);
         }
-        AuthController c = new AuthController();
-
         switch (s[2]) {
             case "inscription": {
                 exiger(m, "POST", s);
                 InscriptionRequest b = corps(ex, InscriptionRequest.class);
-                return rep(c, c.inscrire(b.nom(), b.prenom(), b.email(), b.motDePasse()), 201);
+                return reponse(201, authController.inscrire(b));
             }
             case "connexion": {
                 exiger(m, "POST", s);
                 ConnexionRequest b = corps(ex, ConnexionRequest.class);
-                boolean ok = c.connecter(b.email(), b.motDePasse());
-                if (!ok) {
-                    return new Reponse(401, jsonErreur(c.getMessage()));
-                }
-                return rep(c, true, 200);
+                return reponse(200, authController.connecter(b));
             }
             case "moi":
                 exiger(m, "GET", s);
-                return rep(c, c.consulterMembreCourant(acteur(ex)), 200);
+                return reponse(200, authController.consulterMembreCourant(acteur(ex)));
             default:
                 throw inconnue(s);
         }
@@ -184,28 +205,24 @@ public class Router {
         int n = s.length;
 
         if (n == 2) {
-            if (m.equals("GET")) {
-                MembreController c = new MembreController();
-                return rep(c, c.listerTousLesMembres(), 200);
-            }
-            throw nonSupportee(m, s);
+            exiger(m, "GET", s);
+            return reponse(200, membreController.listerTousLesMembres());
         }
 
         if (n == 3) {
             int id = entier(s[2]);
-            MembreController c = new MembreController();
             switch (m) {
                 case "GET":
-                    return rep(c, c.consulterMembre(id), 200);
+                    return reponse(200, membreController.consulterMembre(id));
                 case "PUT": {
                     exigerSoiMeme(ex, id);
                     ProfilRequest b = corps(ex, ProfilRequest.class);
-                    return rep(c, c.modifierProfil(id, b.nom(), b.prenom(), b.email()), 200);
+                    return reponse(200, membreController.modifierProfil(id, b));
                 }
                 case "DELETE": {
                     exigerSoiMeme(ex, id);
                     SuppressionCompteRequest b = corps(ex, SuppressionCompteRequest.class);
-                    return rep(c, c.supprimerCompte(id, b.motDePasse()), 200);
+                    return reponse(200, membreController.supprimerCompte(id, b));
                 }
                 default:
                     throw nonSupportee(m, s);
@@ -219,19 +236,14 @@ public class Router {
                     exiger(m, "PUT", s);
                     exigerSoiMeme(ex, id);
                     MotDePasseRequest b = corps(ex, MotDePasseRequest.class);
-                    MembreController c = new MembreController();
-                    return rep(c, c.changerMotDePasse(id, b.ancienMotDePasse(), b.nouveauMotDePasse()), 200);
+                    return reponse(200, membreController.changerMotDePasse(id, b));
                 }
-                case "projets": {
+                case "projets":
                     exiger(m, "GET", s);
-                    ProjetController c = new ProjetController();
-                    return rep(c, c.listerProjetsDuMembre(id), 200);
-                }
-                case "taches": {
+                    return reponse(200, projetController.listerProjetsDuMembre(id));
+                case "taches":
                     exiger(m, "GET", s);
-                    TacheController c = new TacheController();
-                    return rep(c, c.listerTachesDuMembre(id), 200);
-                }
+                    return reponse(200, tacheController.listerTachesDuMembre(id));
                 default:
                     break;
             }
@@ -239,9 +251,7 @@ public class Router {
 
         if (n == 5 && s[3].equals("projets") && s[4].equals("actifs")) {
             exiger(m, "GET", s);
-            int id = entier(s[2]);
-            ProjetController c = new ProjetController();
-            return rep(c, c.listerProjetsActifsDuMembre(id), 200);
+            return reponse(200, projetController.listerProjetsActifsDuMembre(entier(s[2])));
         }
 
         throw inconnue(s);
@@ -272,14 +282,12 @@ public class Router {
         int n = s.length;
 
         if (n == 2) {
-            ProjetController c = new ProjetController();
             switch (m) {
                 case "GET":
-                    return rep(c, c.listerTousLesProjets(), 200);
+                    return reponse(200, projetController.listerTousLesProjets());
                 case "POST": {
                     ProjetRequest b = corps(ex, ProjetRequest.class);
-                    return rep(c, c.creerProjet(b.libelle(), b.description(),
-                            b.dateDebut(), b.dateFin(), acteur(ex)), 201);
+                    return reponse(201, projetController.creerProjet(b, acteur(ex)));
                 }
                 default:
                     throw nonSupportee(m, s);
@@ -289,17 +297,15 @@ public class Router {
         int id = entier(s[2]);
 
         if (n == 3) {
-            ProjetController c = new ProjetController();
             switch (m) {
                 case "GET":
-                    return rep(c, c.consulterProjet(id), 200);
+                    return reponse(200, projetController.consulterProjet(id));
                 case "PUT": {
                     ProjetRequest b = corps(ex, ProjetRequest.class);
-                    return rep(c, c.modifierProjet(id, b.libelle(), b.description(),
-                            b.dateDebut(), b.dateFin(), acteur(ex)), 200);
+                    return reponse(200, projetController.modifierProjet(id, b, acteur(ex)));
                 }
                 case "DELETE":
-                    return rep(c, c.supprimerProjet(id, acteur(ex)), 200);
+                    return reponse(200, projetController.supprimerProjet(id, acteur(ex)));
                 default:
                     throw nonSupportee(m, s);
             }
@@ -307,60 +313,40 @@ public class Router {
 
         if (n == 4) {
             switch (s[3]) {
-                case "archiver": {
+                case "archiver":
                     exiger(m, "POST", s);
-                    ProjetController c = new ProjetController();
-                    return rep(c, c.archiverProjet(id, acteur(ex)), 200);
-                }
-                case "desarchiver": {
+                    return reponse(200, projetController.archiverProjet(id, acteur(ex)));
+                case "desarchiver":
                     exiger(m, "POST", s);
-                    ProjetController c = new ProjetController();
-                    return rep(c, c.desarchiverProjet(id, acteur(ex)), 200);
-                }
-                case "quitter": {
+                    return reponse(200, projetController.desarchiverProjet(id, acteur(ex)));
+                case "quitter":
                     exiger(m, "POST", s);
-                    Membre_ProjetController c = new Membre_ProjetController();
-                    return rep(c, c.quitterProjet(id, acteur(ex)), 200);
-                }
-                case "membres": {
+                    return reponse(200, membreProjetController.quitterProjet(id, acteur(ex)));
+                case "membres":
                     exiger(m, "GET", s);
-                    Membre_ProjetController c = new Membre_ProjetController();
-                    return rep(c, c.listerMembresDuProjet(id), 200);
-                }
-                case "sprints": {
-                    SprintController c = new SprintController();
+                    return reponse(200, membreProjetController.listerMembresDuProjet(id));
+                case "sprints":
                     if (m.equals("GET")) {
-                        return rep(c, c.listerSprintsDuProjet(id), 200);
+                        return reponse(200, sprintController.listerSprintsDuProjet(id));
                     }
                     if (m.equals("POST")) {
                         SprintRequest b = corps(ex, SprintRequest.class);
-                        return rep(c, c.creerSprint(id, b.nom(), b.objectif(),
-                                b.dateDebut(), b.dateFin(), acteur(ex)), 201);
+                        return reponse(201, sprintController.creerSprint(id, b, acteur(ex)));
                     }
                     throw nonSupportee(m, s);
-                }
-                case "taches": {
-                    TacheController c = new TacheController();
+                case "taches":
                     if (m.equals("GET")) {
-                        return rep(c, c.listerTachesDuProjet(id), 200);
+                        return reponse(200, tacheController.listerTachesDuProjet(id));
                     }
                     if (m.equals("POST")) {
                         TacheRequest b = corps(ex, TacheRequest.class);
-                        return rep(c, c.creerTache(id, b.idSprint(), b.idMembreAssigne(), b.libelle(),
-                                b.description(), b.dateEcheance(), b.estimation(), b.position(),
-                                acteur(ex)), 201);
+                        return reponse(201, tacheController.creerTache(id, b, acteur(ex)));
                     }
                     throw nonSupportee(m, s);
-                }
                 case "invitations": {
                     exiger(m, "POST", s);
                     InvitationRequest b = corps(ex, InvitationRequest.class);
-                    InvitationController c = new InvitationController();
-                    boolean parEmail = b.email() != null && !b.email().isBlank();
-                    boolean ok = parEmail
-                            ? c.inviterParEmail(id, acteur(ex), b.email())
-                            : c.inviterMembre(id, acteur(ex), b.idRecepteur());
-                    return rep(c, ok, 201);
+                    return reponse(201, invitationController.inviter(id, b, acteur(ex)));
                 }
                 default:
                     break;
@@ -369,26 +355,22 @@ public class Router {
 
         if (n == 5 && s[3].equals("sprints") && s[4].equals("en-cours")) {
             exiger(m, "GET", s);
-            SprintController c = new SprintController();
-            return rep(c, c.consulterSprintEnCours(id), 200);
+            return reponse(200, sprintController.consulterSprintEnCours(id));
         }
 
         if (n == 5 && s[3].equals("membres")) {
             exiger(m, "DELETE", s);
-            int idCible = entier(s[4]);
-            Membre_ProjetController c = new Membre_ProjetController();
-            return rep(c, c.retirerMembre(id, idCible, acteur(ex)), 200);
+            return reponse(200, membreProjetController.retirerMembre(id, entier(s[4]), acteur(ex)));
         }
 
         if (n == 6 && s[3].equals("membres") && s[5].equals("role")) {
             int idCible = entier(s[4]);
-            Membre_ProjetController c = new Membre_ProjetController();
             if (m.equals("GET")) {
-                return rep(c, c.consulterRole(id, idCible), 200);
+                return reponse(200, membreProjetController.consulterRole(id, idCible));
             }
             if (m.equals("PUT")) {
                 RoleRequest b = corps(ex, RoleRequest.class);
-                return rep(c, c.changerRole(id, idCible, b.role(), acteur(ex)), 200);
+                return reponse(200, membreProjetController.changerRole(id, idCible, b, acteur(ex)));
             }
             throw nonSupportee(m, s);
         }
@@ -415,44 +397,39 @@ public class Router {
         int id = entier(s[2]);
 
         if (n == 3) {
-            SprintController c = new SprintController();
             switch (m) {
                 case "GET":
-                    return rep(c, c.consulterSprint(id), 200);
+                    return reponse(200, sprintController.consulterSprint(id));
                 case "PUT": {
                     SprintRequest b = corps(ex, SprintRequest.class);
-                    return rep(c, c.modifierSprint(id, b.nom(), b.objectif(),
-                            b.dateDebut(), b.dateFin(), acteur(ex)), 200);
+                    return reponse(200, sprintController.modifierSprint(id, b, acteur(ex)));
                 }
                 case "DELETE":
-                    return rep(c, c.supprimerSprint(id, acteur(ex)), 200);
+                    return reponse(200, sprintController.supprimerSprint(id, acteur(ex)));
                 default:
                     throw nonSupportee(m, s);
             }
         }
 
         if (n == 4) {
-            SprintController c = new SprintController();
             switch (s[3]) {
                 case "etat": {
                     exiger(m, "PUT", s);
                     EtatRequest b = corps(ex, EtatRequest.class);
-                    return rep(c, c.changerEtat(id, b.etat(), acteur(ex)), 200);
+                    return reponse(200, sprintController.changerEtat(id, b, acteur(ex)));
                 }
                 case "demarrer":
                     exiger(m, "POST", s);
-                    return rep(c, c.demarrerSprint(id, acteur(ex)), 200);
+                    return reponse(200, sprintController.demarrerSprint(id, acteur(ex)));
                 case "terminer":
                     exiger(m, "POST", s);
-                    return rep(c, c.terminerSprint(id, acteur(ex)), 200);
+                    return reponse(200, sprintController.terminerSprint(id, acteur(ex)));
                 case "annuler":
                     exiger(m, "POST", s);
-                    return rep(c, c.annulerSprint(id, acteur(ex)), 200);
-                case "taches": {
+                    return reponse(200, sprintController.annulerSprint(id, acteur(ex)));
+                case "taches":
                     exiger(m, "GET", s);
-                    TacheController tc = new TacheController();
-                    return rep(tc, tc.listerTachesDuSprint(id), 200);
-                }
+                    return reponse(200, tacheController.listerTachesDuSprint(id));
                 default:
                     break;
             }
@@ -475,20 +452,17 @@ public class Router {
             throw inconnue(s);
         }
         int id = entier(s[2]);
-        TacheController c = new TacheController();
 
         if (n == 3) {
             switch (m) {
                 case "GET":
-                    return rep(c, c.consulterTache(id), 200);
+                    return reponse(200, tacheController.consulterTache(id));
                 case "PUT": {
                     TacheRequest b = corps(ex, TacheRequest.class);
-                    return rep(c, c.modifierTache(id, b.idSprint(), b.idMembreAssigne(), b.libelle(),
-                            b.description(), b.dateEcheance(), b.estimation(), b.position(),
-                            acteur(ex)), 200);
+                    return reponse(200, tacheController.modifierTache(id, b, acteur(ex)));
                 }
                 case "DELETE":
-                    return rep(c, c.supprimerTache(id, acteur(ex)), 200);
+                    return reponse(200, tacheController.supprimerTache(id, acteur(ex)));
                 default:
                     throw nonSupportee(m, s);
             }
@@ -497,13 +471,13 @@ public class Router {
         if (n == 4 && s[3].equals("etat")) {
             exiger(m, "PUT", s);
             EtatRequest b = corps(ex, EtatRequest.class);
-            return rep(c, c.changerEtat(id, b.etat(), acteur(ex)), 200);
+            return reponse(200, tacheController.changerEtat(id, b, acteur(ex)));
         }
 
         if (n == 4 && s[3].equals("assignation")) {
             exiger(m, "PUT", s);
             AssignationRequest b = corps(ex, AssignationRequest.class);
-            return rep(c, c.assignerTache(id, b.idMembre(), acteur(ex)), 200);
+            return reponse(200, tacheController.assignerTache(id, b, acteur(ex)));
         }
 
         throw inconnue(s);
@@ -520,25 +494,24 @@ public class Router {
     // ---------------------------------------------------------
     private Reponse routesInvitation(String m, String[] s, HttpExchange ex) throws IOException {
         int n = s.length;
-        InvitationController c = new InvitationController();
 
         if (n == 2) {
             exiger(m, "GET", s);
-            return rep(c, c.listerInvitationsRecues(acteur(ex)), 200);
+            return reponse(200, invitationController.listerInvitationsRecues(acteur(ex)));
         }
 
         if (n == 3 && s[2].equals("en-attente")) {
             exiger(m, "GET", s);
-            return rep(c, c.listerInvitationsEnAttente(acteur(ex)), 200);
+            return reponse(200, invitationController.listerInvitationsEnAttente(acteur(ex)));
         }
 
         if (n == 3) {
             int id = entier(s[2]);
             switch (m) {
                 case "GET":
-                    return rep(c, c.consulterInvitation(id), 200);
+                    return reponse(200, invitationController.consulterInvitation(id));
                 case "DELETE":
-                    return rep(c, c.annulerInvitation(id, acteur(ex)), 200);
+                    return reponse(200, invitationController.annulerInvitation(id, acteur(ex)));
                 default:
                     throw nonSupportee(m, s);
             }
@@ -548,11 +521,11 @@ public class Router {
             int id = entier(s[2]);
             if (s[3].equals("accepter")) {
                 exiger(m, "POST", s);
-                return rep(c, c.accepterInvitation(id, acteur(ex)), 200);
+                return reponse(200, invitationController.accepterInvitation(id, acteur(ex)));
             }
             if (s[3].equals("refuser")) {
                 exiger(m, "POST", s);
-                return rep(c, c.refuserInvitation(id, acteur(ex)), 200);
+                return reponse(200, invitationController.refuserInvitation(id, acteur(ex)));
             }
         }
 
@@ -570,88 +543,38 @@ public class Router {
     // ---------------------------------------------------------
     private Reponse routesNotification(String m, String[] s, HttpExchange ex) throws IOException {
         int n = s.length;
-        NotificationController c = new NotificationController();
 
         if (n == 2) {
             exiger(m, "GET", s);
-            return rep(c, c.listerNotifications(acteur(ex)), 200);
+            return reponse(200, notificationController.listerNotifications(acteur(ex)));
         }
 
         if (n == 3 && s[2].equals("non-lues")) {
             exiger(m, "GET", s);
-            return rep(c, c.listerNotificationsNonLues(acteur(ex)), 200);
+            return reponse(200, notificationController.listerNotificationsNonLues(acteur(ex)));
         }
 
         if (n == 3 && s[2].equals("lues")) {
             exiger(m, "POST", s);
-            return rep(c, c.marquerToutesCommeLues(acteur(ex)), 200);
+            return reponse(200, notificationController.marquerToutesCommeLues(acteur(ex)));
         }
 
         if (n == 4 && s[2].equals("non-lues") && s[3].equals("nombre")) {
             exiger(m, "GET", s);
-            return rep(c, c.compterNotificationsNonLues(acteur(ex)), 200);
+            return reponse(200, notificationController.compterNotificationsNonLues(acteur(ex)));
         }
 
         if (n == 3) {
             exiger(m, "DELETE", s);
-            return rep(c, c.supprimerNotification(entier(s[2]), acteur(ex)), 200);
+            return reponse(200, notificationController.supprimerNotification(entier(s[2]), acteur(ex)));
         }
 
         if (n == 4 && s[3].equals("lue")) {
             exiger(m, "PUT", s);
-            return rep(c, c.marquerCommeLue(entier(s[2]), acteur(ex)), 200);
+            return reponse(200, notificationController.marquerCommeLue(entier(s[2]), acteur(ex)));
         }
 
         throw inconnue(s);
-    }
-
-    // ---------------------------------------------------------
-    // Conversion résultat du controller -> réponse HTTP
-    // (une surcharge par controller, car ils n'ont pas d'interface commune)
-    // ---------------------------------------------------------
-    private Reponse rep(AuthController c, boolean ok, int statut) {
-        return reponse(ok, statut, c.getMessage(), c.getDonnees());
-    }
-
-    private Reponse rep(MembreController c, boolean ok, int statut) {
-        return reponse(ok, statut, c.getMessage(), c.getDonnees());
-    }
-
-    private Reponse rep(ProjetController c, boolean ok, int statut) {
-        return reponse(ok, statut, c.getMessage(), c.getDonnees());
-    }
-
-    private Reponse rep(Membre_ProjetController c, boolean ok, int statut) {
-        return reponse(ok, statut, c.getMessage(), c.getDonnees());
-    }
-
-    private Reponse rep(SprintController c, boolean ok, int statut) {
-        return reponse(ok, statut, c.getMessage(), c.getDonnees());
-    }
-
-    private Reponse rep(TacheController c, boolean ok, int statut) {
-        return reponse(ok, statut, c.getMessage(), c.getDonnees());
-    }
-
-    private Reponse rep(InvitationController c, boolean ok, int statut) {
-        return reponse(ok, statut, c.getMessage(), c.getDonnees());
-    }
-
-    private Reponse rep(NotificationController c, boolean ok, int statut) {
-        return reponse(ok, statut, c.getMessage(), c.getDonnees());
-    }
-
-    private Reponse reponse(boolean ok, int statutSucces, String message, Object donnees) {
-        if (!ok) {
-            // Les controllers transforment toutes les exceptions en message :
-            // on ne sait plus distinguer 403 / 404 / 409, d'où un 400 générique.
-            return new Reponse(400, jsonErreur(message));
-        }
-        if (donnees == null) {
-            return new Reponse(statutSucces, jsonMessage(message));
-        }
-        // Le modèle est converti en DTO de réponse : le mot de passe n'est jamais exposé
-        return new Reponse(statutSucces, gson.toJson(DtoMapper.convertir(donnees)));
     }
 
     // ---------------------------------------------------------
@@ -672,11 +595,7 @@ public class Router {
     }
 
     private int authentifier(HttpExchange ex) {
-        try {
-            return authService.identifier(ex.getRequestHeaders().getFirst("Authorization"));
-        } catch (AuthentificationException e) {
-            throw new HttpErreur(401, e.getMessage());
-        }
+        return authService.identifier(ex.getRequestHeaders().getFirst("Authorization"));
     }
 
     // Un membre ne peut agir que sur son propre compte
@@ -719,19 +638,21 @@ public class Router {
         return new HttpErreur(405, "Méthode non supportée : " + methode + " " + String.join("/", segments));
     }
 
-    private HttpErreur inconnue(String[] segments) {
-        return new HttpErreur(404, "Route inconnue : " + String.join("/", segments));
+    private ResourceNotFoundException inconnue(String[] segments) {
+        return new ResourceNotFoundException("Route inconnue : " + String.join("/", segments));
     }
 
     // ---------------------------------------------------------
     // Utilitaires de réponse
     // ---------------------------------------------------------
-    private String jsonErreur(String message) {
-        return gson.toJson(new ErreurResponse(message == null ? "" : message));
+
+    // Le controller renvoie déjà un DTO (ou une liste de DTO) : on le sérialise tel quel
+    private Reponse reponse(int statut, Object resultat) {
+        return new Reponse(statut, gson.toJson(resultat));
     }
 
-    private String jsonMessage(String message) {
-        return gson.toJson(new MessageResponse(message == null ? "" : message));
+    private String jsonErreur(String message) {
+        return gson.toJson(new ErreurResponse(message == null ? "" : message));
     }
 
     // CORS : le frontend tourne sur une autre origine (ex. localhost:4200 ou 5173).

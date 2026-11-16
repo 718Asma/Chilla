@@ -1,5 +1,6 @@
 package com.enicarthage.chilla.service;
 
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.dao.MembreDAO;
 import com.enicarthage.chilla.dao.Membre_ProjetDAO;
 import com.enicarthage.chilla.dao.ProjetDAO;
@@ -112,7 +113,7 @@ public class Membre_ProjetService {
 
     private void verifierProjetExiste(int idProjet) {
         if (projetDAO.findById(idProjet).isEmpty()) {
-            throw new IllegalArgumentException("Projet introuvable : " + idProjet);
+            throw new ResourceNotFoundException("Projet introuvable : " + idProjet);
         }
     }
 

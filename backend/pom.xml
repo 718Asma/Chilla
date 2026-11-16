@@ -56,7 +56,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.0</version>
                 <configuration>
-                    <mainClass>com.enicarthage.chilla.main.Main</mainClass>
+                    <mainClass>com.enicarthage.chilla.Main</mainClass>
                 </configuration>
             </plugin>
 

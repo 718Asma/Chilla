@@ -1,20 +1,20 @@
 package com.enicarthage.chilla.controller;
 
-import com.enicarthage.chilla.exception.DaoException;
+import com.enicarthage.chilla.dto.DtoMapper;
+import com.enicarthage.chilla.dto.MembreResponse;
+import com.enicarthage.chilla.dto.MessageResponse;
+import com.enicarthage.chilla.dto.MotDePasseRequest;
+import com.enicarthage.chilla.dto.ProfilRequest;
+import com.enicarthage.chilla.dto.SuppressionCompteRequest;
 import com.enicarthage.chilla.model.Membre;
 import com.enicarthage.chilla.service.MembreService;
 
 import java.util.List;
-import java.util.function.Supplier;
 
 // L'inscription et la connexion sont dans AuthController.
 public class MembreController {
 
     private final MembreService membreService;
-
-    private boolean succes;
-    private String message;
-    private Object donnees;
 
     public MembreController() {
         this(new MembreService());
@@ -24,98 +24,40 @@ public class MembreController {
         this.membreService = membreService;
     }
 
-
-    public boolean isSucces() {
-        return succes;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    /** Type déduit de la variable  */
-    @SuppressWarnings("unchecked")
-    public <T> T getDonnees() {
-        return (T) donnees;
-    }
-
     // ---------- LECTURE ----------
 
-    /** Donnees : List<Membre> */
-    public boolean listerTousLesMembres() {
-        return executer(() -> {
-            List<Membre> membres = membreService.getTousLesMembres();
-            membres.forEach(this::masquer);
-            return membres;
-        }, "Liste des membres chargée.");
+    public List<MembreResponse> listerTousLesMembres() {
+        return membreService.getTousLesMembres().stream().map(DtoMapper::vers).toList();
     }
 
-    /** Donnees : Membre */
-    public boolean consulterMembre(int idMembre) {
-        return executer(() -> masquer(membreService.getMembre(idMembre)), "Membre chargé.");
+    public MembreResponse consulterMembre(int idMembre) {
+        return DtoMapper.vers(membreService.getMembre(idMembre));
     }
 
     // ---------- MODIFICATION ----------
 
-    /** Donnees : le Membre modifié. */
-    public boolean modifierProfil(int idMembre, String nom, String prenom, String email) {
-        return executer(() -> {
-            Membre membre = new Membre();
-            membre.setIDmem(idMembre);
-            membre.setNommem(nom == null ? null : nom.trim());
-            membre.setPrenommem(prenom == null ? null : prenom.trim());
-            membre.setEmailmem(email == null ? null : email.trim());
-            return membreService.modifierProfil(membre);
-        }, "Profil modifié avec succès.");
+    public MembreResponse modifierProfil(int idMembre, ProfilRequest requete) {
+        Membre membre = new Membre();
+        membre.setIDmem(idMembre);
+        membre.setNommem(nettoyer(requete.nom()));
+        membre.setPrenommem(nettoyer(requete.prenom()));
+        membre.setEmailmem(nettoyer(requete.email()));
+        return DtoMapper.vers(membreService.modifierProfil(membre));
     }
 
-    public boolean changerMotDePasse(int idMembre, String ancienMotDePasse, String nouveauMotDePasse) {
-        return executerSansRetour(
-                () -> membreService.changerMotDePasse(idMembre, ancienMotDePasse, nouveauMotDePasse),
-                "Mot de passe modifié avec succès.");
+    public MessageResponse changerMotDePasse(int idMembre, MotDePasseRequest requete) {
+        membreService.changerMotDePasse(idMembre, requete.ancienMotDePasse(), requete.nouveauMotDePasse());
+        return new MessageResponse("Mot de passe modifié avec succès.");
     }
 
     // ---------- SUPPRESSION ----------
 
-    public boolean supprimerCompte(int idMembre, String motDePasse) {
-        return executerSansRetour(() -> membreService.supprimerCompte(idMembre, motDePasse),
-                "Compte supprimé.");
+    public MessageResponse supprimerCompte(int idMembre, SuppressionCompteRequest requete) {
+        membreService.supprimerCompte(idMembre, requete.motDePasse());
+        return new MessageResponse("Compte supprimé.");
     }
 
-
-    private Membre masquer(Membre membre) {
-        membre.setMotdepassemem("");
-        return membre;
-    }
-
-    // Exécute une action du service, mémorise le résultat et retourne true si elle a réussi
-    private boolean executer(Supplier<?> action, String messageSucces) {
-        try {
-            donnees = action.get();
-            succes = true;
-            message = messageSucces;
-        } catch (IllegalArgumentException | IllegalStateException | SecurityException e) {
-            echec(e.getMessage());
-        } catch (DaoException e) {
-            System.err.println("Erreur technique : " + e.getMessage());
-            echec("Une erreur technique est survenue (base de données). Veuillez réessayer.");
-        } catch (RuntimeException e) {
-            System.err.println("Erreur inattendue : " + e);
-            echec("Une erreur inattendue est survenue.");
-        }
-        return succes;
-    }
-
-    private boolean executerSansRetour(Runnable action, String messageSucces) {
-        return executer(() -> {
-            action.run();
-            return null;
-        }, messageSucces);
-    }
-
-    private void echec(String messageErreur) {
-        succes = false;
-        donnees = null;
-        message = messageErreur;
+    private String nettoyer(String texte) {
+        return texte == null ? null : texte.trim();
     }
 }

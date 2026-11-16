@@ -62,7 +62,7 @@ public class MembreDAO {
 
     // READ : un membre par id (Optional.empty() si absent)
     public Optional<Membre> findById(int id) {
-        String sql = "SELECT * FROM Membre WHERE IDmem = ?";
+        String sql = "SELECT * FROM Membre WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -101,7 +101,7 @@ public class MembreDAO {
     // UPDATE : retourne true si une ligne a été modifiée
     public boolean update(Membre membre) {
         String sql = "UPDATE Membre SET nommem = ?, prenommem = ?, emailmem = ?, "
-                + "motdepassemem = ?, datecreamem = COALESCE(?, datecreamem) WHERE IDmem = ?";
+                + "motdepassemem = ?, datecreamem = COALESCE(?, datecreamem) WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -121,7 +121,7 @@ public class MembreDAO {
 
     // DELETE : retourne true si une ligne a été supprimée
     public boolean delete(int id) {
-        String sql = "DELETE FROM Membre WHERE IDmem = ?";
+        String sql = "DELETE FROM Membre WHERE id = ?";
 
         try (Connection connection = DatabaseConnection.getConnection();
                 PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -137,7 +137,7 @@ public class MembreDAO {
     // Une ligne SQL -> un objet Membre
     private Membre map(ResultSet result) throws SQLException {
         Membre membre = new Membre();
-        membre.setIDmem(result.getInt("IDmem"));
+        membre.setIDmem(result.getInt("id"));
         membre.setNommem(result.getString("nommem"));
         membre.setPrenommem(result.getString("prenommem"));
         membre.setEmailmem(result.getString("emailmem"));

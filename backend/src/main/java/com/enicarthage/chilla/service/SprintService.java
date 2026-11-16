@@ -1,5 +1,6 @@
 package com.enicarthage.chilla.service;
 
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.dao.Membre_ProjetDAO;
 import com.enicarthage.chilla.dao.ProjetDAO;
 import com.enicarthage.chilla.dao.SprintDAO;
@@ -50,7 +51,7 @@ public class SprintService {
 
     public Sprint getSprint(int idSprint) {
         return sprintDAO.findById(idSprint)
-                .orElseThrow(() -> new IllegalArgumentException("Sprint introuvable : " + idSprint));
+                .orElseThrow(() -> new ResourceNotFoundException("Sprint introuvable : " + idSprint));
     }
 
     public List<Sprint> getSprintsDuProjet(int idProjet) {
@@ -128,7 +129,7 @@ public class SprintService {
 
     private Projet getProjetActif(int idProjet) {
         Projet projet = projetDAO.findById(idProjet)
-                .orElseThrow(() -> new IllegalArgumentException("Projet introuvable : " + idProjet));
+                .orElseThrow(() -> new ResourceNotFoundException("Projet introuvable : " + idProjet));
         if (projet.getEstarchive()) {
             throw new IllegalStateException("Le projet est archivé : aucune modification n'est possible.");
         }

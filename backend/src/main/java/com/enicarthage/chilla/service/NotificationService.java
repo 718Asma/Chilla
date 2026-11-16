@@ -1,5 +1,6 @@
 package com.enicarthage.chilla.service;
 
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.dao.MembreDAO;
 import com.enicarthage.chilla.dao.NotificationDAO;
 import com.enicarthage.chilla.model.Notification;
@@ -28,7 +29,7 @@ public class NotificationService {
             throw new IllegalArgumentException("Le message de la notification est obligatoire.");
         }
         if (membreDAO.findById(idMembre).isEmpty()) {
-            throw new IllegalArgumentException("Membre introuvable : " + idMembre);
+            throw new ResourceNotFoundException("Membre introuvable : " + idMembre);
         }
 
         Notification notification = new Notification();
@@ -79,7 +80,7 @@ public class NotificationService {
 
     private void verifierProprietaire(int idNotification, int idMembre) {
         Notification notification = notificationDAO.findById(idNotification)
-                .orElseThrow(() -> new IllegalArgumentException("Notification introuvable : " + idNotification));
+                .orElseThrow(() -> new ResourceNotFoundException("Notification introuvable : " + idNotification));
         if (notification.getIDmem() != idMembre) {
             throw new SecurityException("Cette notification ne vous appartient pas.");
         }

@@ -1,5 +1,6 @@
 package com.enicarthage.chilla.service;
 
+import com.enicarthage.chilla.exception.ResourceNotFoundException;
 import com.enicarthage.chilla.dao.Membre_ProjetDAO;
 import com.enicarthage.chilla.dao.ProjetDAO;
 import com.enicarthage.chilla.model.Membre_Projet;
@@ -61,7 +62,7 @@ public class ProjetService {
 
     public Projet getProjet(int idProjet) {
         return projetDAO.findById(idProjet)
-                .orElseThrow(() -> new IllegalArgumentException("Projet introuvable : " + idProjet));
+                .orElseThrow(() -> new ResourceNotFoundException("Projet introuvable : " + idProjet));
     }
 
     /** Tous les projets auxquels participe un membre (archivés ou non). */
