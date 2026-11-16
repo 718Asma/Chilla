@@ -1,8 +1,8 @@
-package com.enicarthage.chilla.main;
+package com.enicarthage.chilla;
 
 import com.sun.net.httpserver.HttpServer;
 
-//import com.enicarthage.chilla.router.Router;
+import com.enicarthage.chilla.router.Router;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -12,9 +12,9 @@ public class ApiServer {
     private final HttpServer server;
 
     public ApiServer(int port) throws IOException {
-        //Router router = new Router();
+        Router router = new Router();
         this.server = HttpServer.create(new InetSocketAddress(port), 0);
-        //this.server.createContext("/", router::dispatcher);
+        this.server.createContext("/", router::dispatcher);
         this.server.setExecutor(null);
     }
 

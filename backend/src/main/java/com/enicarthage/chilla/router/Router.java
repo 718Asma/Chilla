@@ -1,5 +1,6 @@
 package com.enicarthage.chilla.router;
 
+import com.enicarthage.chilla.controller.AuthController;
 import com.enicarthage.chilla.controller.InvitationController;
 import com.enicarthage.chilla.controller.MembreController;
 import com.enicarthage.chilla.controller.Membre_ProjetController;
@@ -7,7 +8,9 @@ import com.enicarthage.chilla.controller.NotificationController;
 import com.enicarthage.chilla.controller.ProjetController;
 import com.enicarthage.chilla.controller.SprintController;
 import com.enicarthage.chilla.controller.TacheController;
+import com.enicarthage.chilla.exception.AuthentificationException;
 import com.enicarthage.chilla.model.Membre;
+import com.enicarthage.chilla.service.AuthService;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -56,6 +59,10 @@ public class Router {
                             : LocalDateTime.parse(json.getAsString()))
             .create();
 
+    // Vérification des JWT. Créé une seule fois : l'application refuse de démarrer
+    // si JWT_SECRET est absent (exception levée par JwtService).
+    private final AuthService authService = new AuthService();
+
     // ---------------------------------------------------------
     // Point d'entrée unique pour toutes les requêtes HTTP
     // ---------------------------------------------------------
@@ -63,7 +70,7 @@ public class Router {
         ajouterCors(exchange);
         String methode = exchange.getRequestMethod();
 
-        // Pré-requête CORS du navigateur (frontend séparé)
+        // Pré-requête CORS du navigateur (frontend séparé) : sans jeton
         if (methode.equals("OPTIONS")) {
             envoyer(exchange, 204, "");
             return;
@@ -72,6 +79,10 @@ public class Router {
         String[] segments = exchange.getRequestURI().getPath().split("/");
 
         try {
+            // Sécurisé par défaut : tout est protégé sauf l'inscription et la connexion
+            if (!estRoutePublique(methode, segments)) {
+                authentifier(exchange);
+            }
             Reponse reponse = router(methode, segments, exchange);
             envoyer(exchange, reponse.statut(), reponse.corps());
         } catch (HttpErreur e) {
@@ -90,6 +101,8 @@ public class Router {
             throw new HttpErreur(404, "Route vide ou inconnue.");
         }
         switch (segments[1]) {
+            case "auth":
+                return routesAuth(methode, segments, ex);
             case "membres":
                 return routesMembre(methode, segments, ex);
             case "projets":
@@ -108,17 +121,54 @@ public class Router {
     }
 
     // ---------------------------------------------------------
+    // AUTH (les deux premières routes sont publiques, le reste exige un jeton)
+    // POST /auth/inscription (nom, prenom, email, motDePasse) -> { token, membre }
+    // POST /auth/connexion (email, motDePasse) -> { token, membre }
+    // GET /auth/moi (membre du jeton)
+    //
+    // Toutes les autres routes exigent : Authorization: Bearer <token>
+    // ---------------------------------------------------------
+    private Reponse routesAuth(String m, String[] s, HttpExchange ex) throws IOException {
+        if (s.length != 3) {
+            throw inconnue(s);
+        }
+        AuthController c = new AuthController();
+
+        switch (s[2]) {
+            case "inscription": {
+                exiger(m, "POST", s);
+                JsonObject b = corps(ex);
+                return rep(c, c.inscrire(texte(b, "nom"), texte(b, "prenom"), texte(b, "email"),
+                        texte(b, "motDePasse")), 201);
+            }
+            case "connexion": {
+                exiger(m, "POST", s);
+                JsonObject b = corps(ex);
+                boolean ok = c.connecter(texte(b, "email"), texte(b, "motDePasse"));
+                if (!ok) {
+                    return new Reponse(401, json("erreur", c.getMessage()));
+                }
+                return rep(c, true, 200);
+            }
+            case "moi":
+                exiger(m, "GET", s);
+                return rep(c, c.consulterMembreCourant(acteur(ex)), 200);
+            default:
+                throw inconnue(s);
+        }
+    }
+
+    // ---------------------------------------------------------
     // MEMBRES
-    // POST /membres/inscription
-    // POST /membres/connexion
     // GET /membres
     // GET /membres/{id}
-    // PUT /membres/{id} (nom, prenom, email)
-    // DELETE /membres/{id} (corps : motDePasse)
-    // PUT /membres/{id}/mot-de-passe (ancienMotDePasse, nouveauMotDePasse)
+    // PUT /membres/{id} (nom, prenom, email) : uniquement son propre compte
+    // DELETE /membres/{id} (corps : motDePasse) : uniquement son propre compte
+    // PUT /membres/{id}/mot-de-passe (ancienMotDePasse, nouveauMotDePasse) : uniquement le sien
     // GET /membres/{id}/projets
     // GET /membres/{id}/projets/actifs
     // GET /membres/{id}/taches
+    // (l'inscription et la connexion sont sous /auth)
     // ---------------------------------------------------------
     private Reponse routesMembre(String m, String[] s, HttpExchange ex) throws IOException {
         int n = s.length;
@@ -132,34 +182,20 @@ public class Router {
         }
 
         if (n == 3) {
-            if (s[2].equals("inscription")) {
-                exiger(m, "POST", s);
-                JsonObject b = corps(ex);
-                MembreController c = new MembreController();
-                boolean ok = c.inscrire(texte(b, "nom"), texte(b, "prenom"), texte(b, "email"),
-                        texte(b, "motDePasse"));
-                masquer(c, ok);
-                return rep(c, ok, 201);
-            }
-            if (s[2].equals("connexion")) {
-                exiger(m, "POST", s);
-                JsonObject b = corps(ex);
-                MembreController c = new MembreController();
-                return rep(c, c.connecter(texte(b, "email"), texte(b, "motDePasse")), 200);
-            }
-
             int id = entier(s[2]);
             MembreController c = new MembreController();
             switch (m) {
                 case "GET":
                     return rep(c, c.consulterMembre(id), 200);
                 case "PUT": {
+                    exigerSoiMeme(ex, id);
                     JsonObject b = corps(ex);
                     boolean ok = c.modifierProfil(id, texte(b, "nom"), texte(b, "prenom"), texte(b, "email"));
                     masquer(c, ok);
                     return rep(c, ok, 200);
                 }
                 case "DELETE": {
+                    exigerSoiMeme(ex, id);
                     JsonObject b = corps(ex);
                     return rep(c, c.supprimerCompte(id, texte(b, "motDePasse")), 200);
                 }
@@ -173,6 +209,7 @@ public class Router {
             switch (s[3]) {
                 case "mot-de-passe": {
                     exiger(m, "PUT", s);
+                    exigerSoiMeme(ex, id);
                     JsonObject b = corps(ex);
                     MembreController c = new MembreController();
                     return rep(c, c.changerMotDePasse(id, texte(b, "ancienMotDePasse"),
@@ -573,6 +610,10 @@ public class Router {
     // Conversion résultat du controller -> réponse HTTP
     // (une surcharge par controller, car ils n'ont pas d'interface commune)
     // ---------------------------------------------------------
+    private Reponse rep(AuthController c, boolean ok, int statut) {
+        return reponse(ok, statut, c.getMessage(), c.getDonnees());
+    }
+
     private Reponse rep(MembreController c, boolean ok, int statut) {
         return reponse(ok, statut, c.getMessage(), c.getDonnees());
     }
@@ -624,21 +665,43 @@ public class Router {
     }
 
     // ---------------------------------------------------------
-    // Utilitaires de lecture de la requête
+    // Authentification
     // ---------------------------------------------------------
 
-    // Identifiant du membre qui agit (en-tête X-Membre-Id)
+    // Seules l'inscription et la connexion sont accessibles sans jeton
+    private boolean estRoutePublique(String methode, String[] segments) {
+        return methode.equals("POST")
+                && segments.length == 3
+                && segments[1].equals("auth")
+                && (segments[2].equals("inscription") || segments[2].equals("connexion"));
+    }
+
+    // Identifiant du membre authentifié, lu dans le JWT (en-tête Authorization: Bearer ...).
+    // Remplace l'ancien en-tête X-Membre-Id, que n'importe quel client pouvait falsifier.
+    // On relit l'en-tête à chaque appel plutôt que de stocker l'identité dans l'exchange :
+    // les attributs de HttpExchange sont partagés au niveau du contexte, donc risqués entre requêtes.
     private int acteur(HttpExchange ex) {
-        String valeur = ex.getRequestHeaders().getFirst("X-Membre-Id");
-        if (valeur == null || valeur.isBlank()) {
-            throw new HttpErreur(401, "En-tête X-Membre-Id manquant (connexion requise).");
-        }
+        return authentifier(ex);
+    }
+
+    private int authentifier(HttpExchange ex) {
         try {
-            return Integer.parseInt(valeur.trim());
-        } catch (NumberFormatException e) {
-            throw new HttpErreur(401, "En-tête X-Membre-Id invalide.");
+            return authService.identifier(ex.getRequestHeaders().getFirst("Authorization"));
+        } catch (AuthentificationException e) {
+            throw new HttpErreur(401, e.getMessage());
         }
     }
+
+    // Un membre ne peut agir que sur son propre compte
+    private void exigerSoiMeme(HttpExchange ex, int idMembre) {
+        if (acteur(ex) != idMembre) {
+            throw new HttpErreur(403, "Vous ne pouvez agir que sur votre propre compte.");
+        }
+    }
+
+    // ---------------------------------------------------------
+    // Utilitaires de lecture de la requête
+    // ---------------------------------------------------------
 
     private int entier(String texte) {
         try {
@@ -704,12 +767,13 @@ public class Router {
         return gson.toJson(o);
     }
 
-    // CORS : le frontend tourne sur une autre origine (ex. localhost:4200 ou 5173)
+    // CORS : le frontend tourne sur une autre origine (ex. localhost:4200 ou 5173).
+    // Authorization doit être autorisé, sinon le navigateur bloque le preflight.
     private void ajouterCors(HttpExchange exchange) {
         var h = exchange.getResponseHeaders();
         h.set("Access-Control-Allow-Origin", "*");
         h.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        h.set("Access-Control-Allow-Headers", "Content-Type, X-Membre-Id");
+        h.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
     }
 
     // Envoie la réponse HTTP avec statut et corps JSON

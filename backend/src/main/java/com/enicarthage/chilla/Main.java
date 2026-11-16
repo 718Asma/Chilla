@@ -1,4 +1,4 @@
-package com.enicarthage.chilla.main;
+package com.enicarthage.chilla;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -14,10 +14,10 @@ public class Main {
         }
 
         try {
-            ApiServer serveur = new ApiServer(8080);
+            ApiServer serveur = new ApiServer(8081);
             serveur.demarrer();
-            System.out.println("Serveur HTTP demarre sur http://localhost:8080");
-            System.out.println("Testez avec Postman : GET http://localhost:8080/");        //produits");
+            System.out.println("Serveur HTTP demarre sur http://localhost:8081");
+            System.out.println("Testez avec Postman : GET http://localhost:8081/projets");
         } catch (IOException e) {
             System.out.println("Impossible de demarrer le serveur : " + e.getMessage());
         }

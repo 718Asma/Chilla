@@ -7,6 +7,7 @@ import com.enicarthage.chilla.service.MembreService;
 import java.util.List;
 import java.util.function.Supplier;
 
+// L'inscription et la connexion sont dans AuthController.
 public class MembreController {
 
     private final MembreService membreService;
@@ -36,25 +37,6 @@ public class MembreController {
     @SuppressWarnings("unchecked")
     public <T> T getDonnees() {
         return (T) donnees;
-    }
-
-    // ---------- INSCRIPTION / CONNEXION ----------
-
-    /** Donnees : le Membre créé  */
-    public boolean inscrire(String nom, String prenom, String email, String motDePasse) {
-        return executer(() -> {
-            Membre membre = new Membre();
-            membre.setNommem(nom == null ? null : nom.trim());
-            membre.setPrenommem(prenom == null ? null : prenom.trim());
-            membre.setEmailmem(email == null ? null : email.trim());
-            membre.setMotdepassemem(motDePasse); // en clair : haché par le service
-            return membreService.inscrire(membre);
-        }, "Inscription réussie.");
-    }
-
-    /** Donnees : le Membre connecté. */
-    public boolean connecter(String email, String motDePasse) {
-        return executer(() -> masquer(membreService.authentifier(email, motDePasse)), "Connexion réussie.");
     }
 
     // ---------- LECTURE ----------
