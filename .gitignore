@@ -3,3 +3,10 @@ backend/target/
 *.iml
 .vscode/
 backend/.env
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+.DS_Store
+Thumbs.db
